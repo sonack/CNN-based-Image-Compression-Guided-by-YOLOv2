@@ -5,6 +5,7 @@ import os
 from PIL import Image
 import numpy as np
 
+LABEL_PATH = "/home/snk/WindowsDisk/Download/KITTI/labels/"
 
 def scale_image_channel(im, c, v):
     cs = list(im.split())
@@ -116,8 +117,9 @@ def fill_truth_detection(labpath, w, h, flip, dx, dy, sx, sy):
     return label
 
 def load_data_detection(imgpath, shape, jitter, hue, saturation, exposure):
-    labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
-
+    # labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
+    img_id = os.path.splitext(os.path.basename(imgpath))[0]
+    labpath = os.path.join(LABEL_PATH, img_id + ".txt")
     ## data augmentation
     img = Image.open(imgpath).convert('RGB')
     img,flip,dx,dy,sx,sy = data_augmentation(img, shape, jitter, hue, saturation, exposure)
