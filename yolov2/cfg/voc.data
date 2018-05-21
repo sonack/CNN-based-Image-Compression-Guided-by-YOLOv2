@@ -1,0 +1,4 @@
+train  = /home/snk/WindowsDisk/Download/train.txt
+valid  = /home/snk/WindowsDisk/Download/2007_test.txt
+names = data/voc.names
+backup = backup

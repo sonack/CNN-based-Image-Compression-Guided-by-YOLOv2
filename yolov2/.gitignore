@@ -1,0 +1,10 @@
+*.pyc
+*.swp
+*.log
+*.jpg
+*.bk
+*.o
+*.so
+*.weights
+*backup/
+pretrained/

@@ -1,0 +1,4 @@
+train = /home/snk/WindowsDisk/Download/KITTI/train.txt
+valid = /home/snk/WindowsDisk/Download/KITTI/val.txt
+names = data/kitti.names
+backup = kitti_backup
