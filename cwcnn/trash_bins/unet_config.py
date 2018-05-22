@@ -1,0 +1,127 @@
+#coding:utf8
+from __future__ import print_function
+import warnings
+import os
+
+class DefaultConfig(object):
+
+# patch params
+    patch_size = 128  # python main.py train --patch_size=16
+
+# freeze decoder
+    init_val = False
+    freeze_decoder = False
+
+# lr decay controlled by file created
+    use_file_decay_lr = False
+    lr_decay_file = "signal/lr_decay"
+
+# inf config
+    save_inf_img = False
+    inf_imgs_save_path = "./inf/imgs"
+    inf_data_root = "/share/Dataset/CLIC/test/all"  # MyImageFolder
+
+# model
+    # model = "ContentWeightedCNN"
+    model = "ContentWeightedCNN_UNET"
+    use_imp = False
+    use_unet = False
+
+    rate_loss_weight = 0.2
+    rate_loss_threshold = 0.122      # 0.643
+
+# E->D save path
+    save_test_img = False
+    test_imgs_save_path = "./test/imgs"
+
+# datasets
+    # ImageFolder
+    train_data_root = "/share/Dataset/flickr/flickr_train"
+    val_data_root = "/share/Dataset/flickr/flickr_val"
+# training
+    batch_size = 8   # 7805 / 64 = 122
+    use_gpu = True
+    num_workers = 8
+    max_epoch = 30 * 3
+    lr = 1e-4
+    lr_decay = 0.1
+    lr_anneal_epochs = 30
+
+    use_early_adjust = False
+    tolerant_max = 3
+
+    weight_decay = 0
+
+# display
+    # env = 'debug_pytorch_issue' # visdom环境  test for imp, main for no imp
+    print_freq = 15 # 157 -> 30 -> 1 -> 1000
+    print_smooth = True
+    plot_interval = 15
+    path_suffix = "UNet_Base_Student_btsz=8_p{ps}/".format(ps=patch_size)  # noci  no_context_information
+    exp_id = "exp_unet_base_student"
+    plot_path = os.path.join('/home/zhangwenqiang/jobs/pytorch_implement/logs/{exp_id}/plots/'.format(exp_id=exp_id), path_suffix)
+    log_path = os.path.join('/home/zhangwenqiang/jobs/pytorch_implement/logs/{exp_id}/texts/'.format(exp_id=exp_id), path_suffix)
+# debug
+    debug_file = "debug/info"
+# finetune
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/TestPatchSizeNoImpP32_Plain/04-28/TestPatchSizeNoImpP32_Plain_6_04-28_16:13:12.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/Unet_T/05-04/TPSE_p128_no_imp_87_05-04_17:52:35.pth"
+    finetune = False  # continue training or finetune when given a resume file
+
+# run val
+    val_ckpt = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ContentWeightedCNN_ImageNet/03-23/ContentWeightedCNN_ImageNet_22_03-23_04:54:24.pth"
+    run_val_data_root = "/share/Dataset/ILSVRC12/debug_data/val/"
+# show inf image
+    show_inf_imgs_T = 1
+    save_inf_imgs_path = os.path.join(plot_path, 'inf_imgs')
+
+
+
+
+
+
+# ---------------------------------------------------------
+    def __getattr__(self, attr_name):
+        return None
+    
+    def parse(self, kwargs={}):
+        # print ('parse kwargs', kwargs)
+        for k,v in kwargs.items():
+            if not hasattr(self, k):
+                warnings.warn("Warning: opt has not attribute %s" % k)
+                print ("Warning: opt has not attribute %s" % k)
+            setattr(self, k, v)
+            if k == "patch_size" and v != self.patch_size:
+                setattr(self, "path_suffix", "TPSE_p{ps}/".format(ps=v))
+                setattr(self, "plot_path", os.path.join('/home/zhangwenqiang/jobs/pytorch_implement/logs/{exp_id}/plots/'.format(exp_id=self.exp_id), self.path_suffix))
+                setattr(self, "log_path", os.path.join('/home/zhangwenqiang/jobs/pytorch_implement/logs/{exp_id}/texts/'.format(exp_id=self.exp_id), self.path_suffix))
+                setattr(self, "save_inf_imgs_path", os.path.join(self.plot_path, 'inf_imgs'))
+        print('\nUser Config:\n')
+        print('*' * 30)
+        for k,v in self.__class__.__dict__.items():
+            if not k.startswith('__') and k != 'parse':
+                print(k,":",getattr(self, k))
+        print('*' * 30)
+        print('Good Luck!')
+
+        # create plot and text path
+        if not os.path.exists(opt.plot_path):
+            print ('mkdir', opt.plot_path)
+            os.makedirs(opt.plot_path)
+
+        if not os.path.exists(opt.log_path):
+            print ('mkdir', opt.log_path)
+            os.makedirs(opt.log_path)
+
+        if not os.path.exists(opt.save_inf_imgs_path):
+            print ('mkdir', opt.save_inf_imgs_path)
+            os.makedirs(opt.save_inf_imgs_path)
+        
+ 
+opt = DefaultConfig()
+
+
+
+
+if __name__ == '__main__':
+    opt.parse()

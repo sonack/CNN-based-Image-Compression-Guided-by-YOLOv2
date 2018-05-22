@@ -218,6 +218,7 @@ def test(epoch):
     num_classes = cur_model.num_classes
     anchors     = cur_model.anchors
     num_anchors = cur_model.num_anchors
+    # pdb.set_trace()
     total       = 0.0
     proposals   = 0.0
     correct     = 0.0
@@ -257,7 +258,7 @@ def test(epoch):
     fscore = 2.0*precision*recall/(precision+recall+eps)
     logging("precision: %f, recall: %f, fscore: %f" % (precision, recall, fscore))
 
-evaluate = False
+evaluate = True
 if evaluate:
     logging('evaluating ...')
     test(0)

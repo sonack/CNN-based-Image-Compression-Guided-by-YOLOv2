@@ -1,0 +1,103 @@
+#coding:utf8
+from __future__ import print_function
+import warnings
+# resnet_config
+class DefaultConfig(object):
+# compression model
+    use_file_signal_to_adjust_lr = True
+    signal_file = 'signal/adj_lr'
+    
+# adjust lr according to decay_step_list
+    lr_decay_step_list = [8, 16, 24]
+
+# cherry-pick the epoch 10
+    compression_model_ckpt = '/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/CWCNN_limu_ImageNet_imp_r=0.67_γ=0.2/03-24/CWCNN_limu_ImageNet_imp_r=0.67_γ=0.2_10_03-24_17:10:28.pth'
+
+# model
+    model = "ContentWeightedCNN"
+    use_imp = True
+
+    rate_loss_weight = 0.2
+    rate_loss_threshold = 0.67       # 0.643
+# save path
+    test_imgs_save_path = "./test/imgs"
+    save_test_img = False
+# datasets
+    train_data_root = "/share/Dataset/ILSVRC12/train"
+    # train_data_root = "/share/Dataset/ILSVRC12/val"
+    val_data_root = "/share/Dataset/ILSVRC12/val"
+    # train_data_root = "/share/Dataset/ILSVRC12/test_wrapper/val"
+    # val_data_root = "/share/Dataset/ILSVRC12/test_wrapper/val"
+# training
+    batch_size = 64
+    use_gpu = True
+    num_workers = 8
+    max_epoch = 128  # 28 + 100
+    lr = 0.000025
+    lr_decay = 0.1
+    lr_anneal_epochs = 3000   # don't use it, so I set it as 3000
+    use_early_adjust = False  # don't use it, because its cost is too expensive!!!
+    tolerant_max = 3
+    weight_decay = 1e-4
+    momentum = 0.9
+# display
+    # env = 'debug_pytorch_issue' # visdom环境  test for imp, main for no imp
+    print_freq = 157
+    print_smooth = True
+    plot_interval = 157
+    plot_path = '/home/zhangwenqiang/jobs/pytorch_implement/logs/plots/ResNet50_In_RGB_bs=256/adj_lr/'
+    log_path = '/home/zhangwenqiang/jobs/pytorch_implement/logs/texts/ResNet50_In_RGB_bs=256/adj_lr/'
+# debug
+    debug_file = "debug/info"
+# finetune
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ContentWeightedCNN_ImageNet/03-21/ContentWeightedCNN_ImageNet_6_03-21_01:36:35.pth"
+    # resume from epoch 18, lr from 1e-4 -> 1e-5
+    # resume ="/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ContentWeightedCNN_ImageNet/03-22/ContentWeightedCNN_ImageNet_18_03-22_17:07:34.pth"
+    # resume from epoch 22, lr from 1e-5 -> 1e-6
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ContentWeightedCNN_ImageNet/03-23/ContentWeightedCNN_ImageNet_22_03-23_04:54:24.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ContentWeightedCNN/03-20/ContentWeightedCNN_2_03-20_12:34:08.pth"
+    # resume = "/home/snk/Desktop/workspace/pytorch_implement/checkpoints/ContentWeightedCNN/03-11/ContentWeightedCNN_30_03-11_03:50:28.pth" 
+    # resume = "/home/snk/Desktop/workspace/pytorch_implement/checkpoints/CWCNN_imp_r=0.5_γ=0.2/03-11/CWCNN_imp_r=0.5_γ=0.2_17_03-11_23:59:47.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50/03-25/ResNet50_11_03-25_11:41:01.pth"
+    
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_bs=256/03-27/ResNet50_bs=256_8_03-27_12:25:38.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_Official/03-27/ResNet50_Official_9_03-27_22:38:35.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_bs=256/03-27/ResNet50_bs=256_9_03-27_22:45:39.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_bs=256/03-28/ResNet50_bs=256_16_03-28_10:55:03.pth"
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_Official/03-28/ResNet50_Official_16_03-28_10:34:58.pth"
+    # restart training at epoch 11, adding weight_decay to adam 
+    # resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_bs=256/03-29/ResNet50_bs=256_28_03-29_16:53:09.pth"
+    resume = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ResNet50_bs=256/03-30/ResNet50_bs=256_38_03-30_18:47:34.pth"
+    finetune = False  # continue training or finetune when given a resume file
+# run val
+    val_ckpt = "/home/zhangwenqiang/jobs/pytorch_implement/checkpoints/ContentWeightedCNN_ImageNet/03-23/ContentWeightedCNN_ImageNet_22_03-23_04:54:24.pth"
+    run_val_data_root = "/share/Dataset/ILSVRC12/debug_data/val/"
+
+
+
+
+
+
+# ---------------------------------------------------------
+    def __getattr__(self, attr_name):
+        return None
+    
+    def parse(self, kwargs={}):
+        for k,v in kwargs.items():
+            if not hasattr(self, k):
+                warnings.warn("Warning: opt has not attribute %s" % k)
+            setattr(self, k, v)
+        
+        print('User Config:\n')
+        print('-' * 30)
+        for k,v in self.__class__.__dict__.items():
+            if not k.startswith('__') and k != 'parse':
+                print(k,":",getattr(self, k))
+        print('-' * 30)
+        print('Good Luck!')
+        
+opt = DefaultConfig()
+
+
+if __name__ == '__main__':
+    opt.parse()

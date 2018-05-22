@@ -2,7 +2,7 @@
 
 The CNN based Image Compression Method Guided by Object Detection Algorithm(YOLOv2).
 
-目标检测导向的基于卷积神经的图像压缩编码方法的研究
+目标检测导向的基于卷积神经网络的图像压缩编码方法的研究
 
 
 

@@ -1,0 +1,5 @@
+/var/spool/torque/mom_priv/jobs/5319.master.SC: line 2: from: command not found
+/var/spool/torque/mom_priv/jobs/5319.master.SC: line 3: import: command not found
+/var/spool/torque/mom_priv/jobs/5319.master.SC: line 4: import: command not found
+/var/spool/torque/mom_priv/jobs/5319.master.SC: line 6: syntax error near unexpected token `('
+/var/spool/torque/mom_priv/jobs/5319.master.SC: line 6: `class DefaultConfig(object):'
