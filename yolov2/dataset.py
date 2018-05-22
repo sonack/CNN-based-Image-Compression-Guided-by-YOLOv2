@@ -67,7 +67,9 @@ class listDataset(Dataset):
             if self.shape:
                 img = img.resize(self.shape)
     
-            labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
+            # labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
+            img_id = os.path.splitext(os.path.basename(imgpath))[0]
+            labpath = os.path.join(LABEL_PATH, img_id + ".txt")
             label = torch.zeros(50*5)
             #if os.path.getsize(labpath):
             #tmp = torch.from_numpy(np.loadtxt(labpath))

@@ -1,0 +1,21 @@
+#PBS -N YOLOv2-kitti
+#PBS -o /home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/yolov2/logs/yolov2-kitti.out
+#PBS -e /home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/yolov2/logs/yolov2-kitti.err
+#PBS -l nodes=node1:ppn=8:gpus=4
+#PBS -r y
+#PBS -q default
+
+cd /home/zhangwenqiang/jobs/pytorch-yolo2
+
+echo Time is `date` # 打印一些log信息
+echo Directory is $PWD
+echo This job runs on following nodes:
+cat $PBS_NODEFILE
+cat $PBS_GPUFILE
+
+source activate py36pytorch0.3.1
+
+./train.sh
+
+source deactivate
+echo End Time is `date` # 打印一些log信息

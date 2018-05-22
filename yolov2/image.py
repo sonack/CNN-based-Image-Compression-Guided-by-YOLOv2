@@ -5,7 +5,7 @@ import os
 from PIL import Image
 import numpy as np
 
-LABEL_PATH = "/home/snk/WindowsDisk/Download/KITTI/labels/"
+LABEL_PATH = "/share/Dataset/KITTI/labels/"
 
 def scale_image_channel(im, c, v):
     cs = list(im.split())

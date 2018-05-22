@@ -1,4 +1,5 @@
-train = /home/snk/WindowsDisk/Download/KITTI/val.txt
-valid = /home/snk/WindowsDisk/Download/KITTI/val.txt
+train = /share/Dataset/KITTI/train.txt
+valid = /share/Dataset/KITTI/val.txt
 names = data/kitti.names
 backup = kitti_backup
+gpus = 0,1,2,3,4,5,6,7
