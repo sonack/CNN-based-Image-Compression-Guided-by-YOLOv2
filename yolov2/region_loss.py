@@ -146,7 +146,7 @@ class RegionLoss(nn.Module):
         pred_boxes[3] = torch.exp(h.data) * anchor_h
 
 
-        pdb.set_trace()
+        # pdb.set_trace()
         pred_boxes = convert2cpu(pred_boxes.transpose(0,1).contiguous().view(-1,4))
         t2 = time.time()
 

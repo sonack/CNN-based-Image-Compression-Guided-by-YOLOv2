@@ -17,6 +17,8 @@ def detect(cfgfile, weightfile, imgfile):
         namesfile = 'data/voc.names'
     elif m.num_classes == 80:
         namesfile = 'data/coco.names'
+    elif m.num_classes == 8:
+        namesfile = 'data/kitti.names'
     else:
         namesfile = 'data/names'
     

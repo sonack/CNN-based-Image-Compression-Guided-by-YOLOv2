@@ -23,7 +23,7 @@ from cfg import parse_cfg
 from region_loss import RegionLoss
 from darknet import Darknet
 from models.tiny_yolo import TinyYoloNet
-
+import pdb
 
 # Training settings
 datacfg       = sys.argv[1]
@@ -54,7 +54,7 @@ max_epochs    = max_batches*batch_size//nsamples+1
 use_cuda      = True
 seed          = int(time.time())
 eps           = 1e-5
-save_interval = 10  # epoches
+save_interval = 1  # epoches
 dot_interval  = 70  # batches
 
 # Test parameters
@@ -79,6 +79,7 @@ model.print_network()
 
 region_loss.seen  = model.seen
 processed_batches = model.seen/batch_size
+# print ('init processed_batches = %d' % processed_batches)
 
 init_width        = model.width
 init_height       = model.height
@@ -119,6 +120,7 @@ def adjust_learning_rate(optimizer, batch):
                 break
         else:
             break
+    # print ('Adjust lr as %s when batch %s.' % (lr, batch))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr/batch_size
     return lr
@@ -151,6 +153,7 @@ def train(epoch):
         t2 = time.time()
         adjust_learning_rate(optimizer, processed_batches)
         processed_batches = processed_batches + 1
+        # print ('Inc process_batches as %d' %  processed_batches)
         #if (batch_idx+1) % dot_interval == 0:
         #    sys.stdout.write('.')
 
@@ -162,6 +165,7 @@ def train(epoch):
         t4 = time.time()
         optimizer.zero_grad()
         t5 = time.time()
+        # pdb.set_trace()
         output = model(data)
         t6 = time.time()
         region_loss.seen = region_loss.seen + data.data.size(0)
