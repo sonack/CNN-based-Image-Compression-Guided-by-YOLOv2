@@ -12,9 +12,10 @@ class DefaultConfig(object):
     model = "ContentWeightedCNN_YOLO"
     use_imp = True
 
-    contrastive_degree = 5
-    rate_loss_weight = 0.05
-    rate_loss_threshold = 0.1      # 0.643  
+    contrastive_degree = 100
+    mse_bbox_weight = 10
+    rate_loss_weight = 0.02
+    rate_loss_threshold = 0.01      # 0.643  
 # save path
     test_imgs_save_path = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs"
     save_test_img = True
@@ -41,7 +42,8 @@ class DefaultConfig(object):
 # debug
     debug_file = "debug/info"
 # finetune
-    resume = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.122_gama=0.2/05-24/Cmpr_yolo_imp__r=0.122_gama=0.2_90_05-24_04:33:43.pth"
+    # resume = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.122_gama=0.2/05-24/Cmpr_yolo_imp__r=0.122_gama=0.2_90_05-24_04:33:43.pth"
+    # resume = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.122_gama=0.2/05-24/Cmpr_yolo_imp__r=0.122_gama=0.2_62_05-24_14:38:54.pth"
     finetune = True  # continue training or finetune when given a resume file
 
 # ---------------------------------------------------------

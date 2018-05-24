@@ -45,7 +45,8 @@ def multiple_gpu_process(model):
 def train(**kwargs):
     opt.parse(kwargs)
     # log file
-    ps = PlotSaver("Cmpr_with_YOLOv2_"+time.strftime("_%m_%d_%H:%M:%S")+".log.txt")
+    logfile_name = "Cmpr_with_YOLOv2_"+time.strftime("_%m_%d_%H:%M:%S")+".log.txt"
+    ps = PlotSaver(logfile_name)
 
 
     # step1: Model
@@ -80,12 +81,14 @@ def train(**kwargs):
     train_data = ImageCropWithBBoxMaskDataset(
         opt.train_data_list,
         train_data_transforms,
-        contrastive_degree = opt.contrastive_degree
+        contrastive_degree = opt.contrastive_degree,
+        mse_bbox_weight = opt.mse_bbox_weight
     )
     val_data = ImageCropWithBBoxMaskDataset(
         opt.val_data_list,
         val_data_transforms,
-        contrastive_degree = opt.contrastive_degree
+        contrastive_degree = opt.contrastive_degree,
+        mse_bbox_weight = opt.mse_bbox_weight
     )
     train_dataloader = DataLoader(train_data, opt.batch_size, shuffle=True, num_workers=opt.num_workers, pin_memory=True)
     val_dataloader = DataLoader(val_data, opt.batch_size, shuffle=False, num_workers=opt.num_workers, pin_memory=True)
@@ -93,6 +96,8 @@ def train(**kwargs):
     # step3: criterion and optimizer
 
     mse_loss = t.nn.MSELoss(size_average = False)
+    def weighted_mse_loss(input, target, weight):
+        return t.sum(weight * (input - target) ** 2)
 
     if opt.use_imp:
         # TODO: new rate loss
@@ -169,9 +174,9 @@ def train(**kwargs):
         if (epoch == start_epoch + 1) and opt.init_val:
             print ('Init validation ... ')
             if opt.use_imp:
-                mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, mse_loss, rate_loss, ps)
+                mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, weighted_mse_loss, rate_loss, ps)
             else:
-                mse_val_loss = val(model, val_dataloader, mse_loss, None, ps)
+                mse_val_loss = val(model, val_dataloader, weighted_mse_loss, None, ps)
         
             ps.add_point('val mse loss', mse_val_loss)
             if opt.use_imp:
@@ -203,30 +208,33 @@ def train(**kwargs):
                     val_mse_loss = mse_val_loss
                 ))
 
-
         model.train()
         # mask is the detection bounding box mask
-        for idx, (data, mask) in enumerate(train_dataloader):
-            
+        for idx, (data, mask, o_mask) in enumerate(train_dataloader):
+
             # pdb.set_trace()
 
             data = Variable(data)
             mask = Variable(mask)
-            
+            o_mask = Variable(o_mask)
             
             
             if opt.use_gpu:
                 data = data.cuda(async = True)
                 mask = mask.cuda(async = True)
+                o_mask = o_mask.cuda(async = True)
             
+            # pdb.set_trace()
+
             optimizer.zero_grad()
-            reconstructed, imp_mask_sigmoid = model(data, mask)
+            reconstructed, imp_mask_sigmoid = model(data, o_mask, mask)
 
             # print ('imp_mask_height', model.imp_mask_height)
             # pdb.set_trace()
 
             # print ('type recons', type(reconstructed.data))
-            loss = mse_loss(reconstructed, data)
+            loss = weighted_mse_loss(reconstructed, data, o_mask)
+            # loss = mse_loss(reconstructed, data)
             caffe_loss = loss / (2 * opt.batch_size)
             
             if opt.use_imp:
@@ -276,11 +284,13 @@ def train(**kwargs):
             ps.make_plot("train rate loss")
             ps.make_plot("train total loss")
 
+        print ('Validating ...')
+
         # val 
         if opt.use_imp:
-            mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, mse_loss, rate_loss, ps)
+            mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, weighted_mse_loss, rate_loss, ps)
         else:
-            mse_val_loss = val(model, val_dataloader, mse_loss, None, ps)
+            mse_val_loss = val(model, val_dataloader, weighted_mse_loss, None, ps)
     
         ps.add_point('val mse loss', mse_val_loss)
         if opt.use_imp:
@@ -357,7 +367,9 @@ val_mse_loss: {val_mse_loss}, val_rate_loss: {val_rate_loss}, val_total_loss: {v
                     param_group['lr'] = lr
                 print ('Anneal lr to %.10f at epoch %d due to decay-file indicator.' % (lr, epoch))
                 ps.log ('Anneal lr to %.10f at epoch %d due to decay-file indicator.' % (lr, epoch))
-    
+
+        if previous_loss == 1e100:
+            print ('Start training, please inspect log file %s!' % logfile_name)
         previous_loss = total_loss_meter.value()[0]
 
 # TenCrop + Lambda
@@ -382,17 +394,20 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
         rate_loss_meter.reset()
         total_loss_meter.reset()
 
-    for idx, (data, mask) in enumerate(dataloader):
+    for idx, (data, mask, o_mask) in enumerate(dataloader):
         # ps.log('%.0f%%' % (idx*100.0/len(dataloader)))
         val_data = Variable(data, volatile=True)
         val_mask = Variable(mask, volatile=True)
+        val_o_mask = Variable(o_mask, volatile=True)
+
         if opt.use_gpu:
             val_data = val_data.cuda(async=True)
             val_mask = val_mask.cuda(async=True)
+            val_o_mask = val_o_mask.cuda(async=True)
 
         reconstructed, imp_mask_sigmoid = model(val_data, val_mask)
 
-        batch_loss = mse_loss(reconstructed, val_data)
+        batch_loss = mse_loss(reconstructed, val_data, val_o_mask)
         batch_caffe_loss = batch_loss / (2 * opt.batch_size)
 
         if opt.use_imp and rate_loss:
@@ -432,13 +447,15 @@ def test(model, dataloader):
     mmse = 0
     mpsnr = 0
     mrate = 0
-    for idx, (data, mask) in progress_bar:
+    for idx, (data, mask, o_mask) in progress_bar:
         test_data = Variable(data, volatile=True)
         test_mask = Variable(mask, volatile=True)
+        test_o_mask = Variable(o_mask, volatile=True)
         # pdb.set_trace()
         if opt.use_gpu:
-            test_data = test_data.cuda()
-            test_mask = test_mask.cuda()
+            test_data = test_data.cuda(async=True)
+            test_mask = test_mask.cuda(async=True)
+            test_o_mask = test_o_mask.cuda(async=True)
         
         reconstructed, imp_mask_sigmoid = model(test_data, test_mask)
         # clamp to [0.0,1.0]
@@ -480,7 +497,8 @@ def run_test():
     if opt.use_gpu:
         model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     
-    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.122_gama=0.2/05-23/Cmpr_yolo_imp__r=0.122_gama=0.2_2_05-23_23:57:15.pth"
+
+    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.122_gama=0.2/05-24/Cmpr_yolo_imp__r=0.122_gama=0.2_61_05-24_14:35:40.pth"
 
 
     model.load(None, test_ckpt)

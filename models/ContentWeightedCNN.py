@@ -322,8 +322,8 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def reset_parameters(self):
         self.apply(weights_initialization)
     
-    def forward(self, x, m, need_decode = True):
-        mgdata = self.encoder(x)
+    def forward(self, x, o_m, m, need_decode = True):
+        mgdata = self.encoder(th.cat((x,o_m), 1))
         # print('mgdata size',mgdata.shape)
         if self.use_imp:
             m = m.unsqueeze(1)
@@ -341,8 +341,8 @@ class ContentWeightedCNN_YOLO(BasicModule):
         if need_decode:
             dec_data = self.decoder(enc_data)
         # print ('dec_data size', dec_data.size())
-        return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
-        # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
+        # return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
         # return dec_data  # no_imp
 
 
@@ -362,7 +362,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def make_encoder(self):
         layers = [
             # changed to 4
-            nn.Conv2d(3, 128, 8, 4, 2),
+            nn.Conv2d(4, 128, 8, 4, 2),
             nn.ReLU(inplace=False), # 54   # 128 -> 32
 
             ResidualBlock(128, 128),

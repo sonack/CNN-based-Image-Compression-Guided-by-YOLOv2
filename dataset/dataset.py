@@ -20,7 +20,7 @@ TEST_LABEL_PATH = '/home/snk/WindowsDisk/Download/KITTI/test_labels/'
 TRAIN_GT_PATH = '/home/snk/WindowsDisk/Download/KITTI/labels/'
 
 
-def generate_crop_mask(img_size, crop_region, full_mask, crop_size):
+def generate_crop_mask(img_size, crop_region, full_mask, crop_size, original_crop = False):
     w, h = img_size
     left, upper, right, lower = crop_region
 
@@ -28,10 +28,13 @@ def generate_crop_mask(img_size, crop_region, full_mask, crop_size):
     right_relative = right / w
     upper_relative = upper / h
     lower_relative = lower / h
-
-    mw = w // 8
-    mh = h // 8
-    m_crop_size = crop_size // 8
+    mw = w
+    mh = h
+    m_crop_size = crop_size
+    if not original_crop:
+        mw = w // 8
+        mh = h // 8
+        m_crop_size = m_crop_size // 8
 
     mask_left = int(left_relative * mw)
     mask_right = mask_left + m_crop_size
@@ -40,7 +43,7 @@ def generate_crop_mask(img_size, crop_region, full_mask, crop_size):
     crop_mask = full_mask[mask_upper:mask_lower,mask_left:mask_right]
     return crop_mask
 
-def bbox_center_crop(img, full_mask, crop_size, box):
+def bbox_center_crop(img, full_mask, original_full_mask, crop_size, box):
     w, h = img.size
     _, cx, cy, bw, bh = box
     cx = int(cx * w)
@@ -69,9 +72,10 @@ def bbox_center_crop(img, full_mask, crop_size, box):
 
     crop = img.crop(crop_region)
     crop_mask = generate_crop_mask((w, h), crop_region, full_mask, crop_size)
-    return crop, crop_mask
+    original_crop_mask = generate_crop_mask((w, h), crop_region, original_full_mask, crop_size, True)
+    return crop, crop_mask, original_crop_mask
 
-def random_pick_crop(img, full_mask, crop_size):
+def random_pick_crop(img, full_mask, original_full_mask, crop_size):
     w, h = img.size
     max_x = w - crop_size
     max_y = h - crop_size
@@ -85,7 +89,8 @@ def random_pick_crop(img, full_mask, crop_size):
     
     crop = img.crop(crop_region)
     crop_mask = generate_crop_mask((w, h), crop_region, full_mask, crop_size)
-    return crop, crop_mask
+    original_crop_mask = generate_crop_mask((w, h), crop_region, original_full_mask, crop_size, True)
+    return crop, crop_mask, original_crop_mask
 
     
 # <object-class> <x> <y> <width> <height>
@@ -110,11 +115,12 @@ def fill_full_mask(mask, bs, R):
 
 
 class ImageCropWithBBoxMaskDataset(Dataset):
-    def __init__(self, list_file, transform = None, crop_size = 320, contrastive_degree = 2, train = True):
+    def __init__(self, list_file, transform = None, crop_size = 320, contrastive_degree = 2, mse_bbox_weight = 2, train = True):
         self.imgs = open(list_file).readlines()
         self.transform = transform
         self.crop_size = crop_size
         self.R = contrastive_degree
+        self.mse_bbox_weight = mse_bbox_weight
         self.train = train
 
     def __len__(self):
@@ -132,6 +138,7 @@ class ImageCropWithBBoxMaskDataset(Dataset):
             print ('Unknown source(train/test) of img!')
         img = Image.open(img_path)
         w, h = img.size
+        original_full_mask = th.ones((h,w))
         full_mask = th.ones((h//8, w//8))
         bs = np.array([])
         if os.path.getsize(label_path):
@@ -143,23 +150,24 @@ class ImageCropWithBBoxMaskDataset(Dataset):
         num_objs = bs.shape[0]
         if num_objs:
             fill_full_mask(full_mask, bs, self.R)
+            fill_full_mask(original_full_mask, bs, self.mse_bbox_weight)
         if not self.train:
             if self.transform:
                 img = self.transform(img)
-            return (img, full_mask)
+            return (img, full_mask, original_full_mask)
         
         need_bbox_center_crop = num_objs and random.randint(0,10000) % 2 == 0
         # bbox center crop (must contain obj)
         if need_bbox_center_crop:
             # print ('center')
-            crop, crop_mask = bbox_center_crop(img, full_mask, self.crop_size, bs[random.randint(0, len(bs)-1)])
+            crop, crop_mask, original_crop_mask = bbox_center_crop(img, full_mask, original_full_mask, self.crop_size, bs[random.randint(0, len(bs)-1)])
         # random crop (very possible background)
         else:
             # print ('random')
-            crop, crop_mask = random_pick_crop(img, full_mask, self.crop_size)
+            crop, crop_mask, original_crop_mask = random_pick_crop(img, full_mask, original_full_mask, self.crop_size)
         if self.transform:
             crop = self.transform(crop)
-        return (crop, crop_mask)
+        return (crop, crop_mask, original_crop_mask.unsqueeze(0))
         
 class ImageNet_200k(Dataset):
 
@@ -261,12 +269,19 @@ def test_fill_mask():
     print (w, h)
     full_mask = th.ones((h//8, w//8))
     print (full_mask.size)
+    original_full_mask = th.ones((h,w))
     bs = np.loadtxt('/home/snk/WindowsDisk/Download/KITTI/labels/000000.txt')
     if len(bs):
         bs = bs.reshape((-1, 5))
     num_objs = bs.shape[0]
     if num_objs:
         fill_full_mask(full_mask, bs, 233)
+        fill_full_mask(original_full_mask, bs, 10)
+    img.show()
+    # plt.imshow(full_mask.numpy())
+    plt.imshow(original_full_mask.numpy())
+    plt.show()
+    # pdb.set_trace()
     # print (full_mask)
     # plt.plot([1,2])
     # plt.imshow(full_mask.numpy())
@@ -274,18 +289,19 @@ def test_fill_mask():
     print (len(bs))
     rnd = random.randint(0, len(bs)-1)
     print (rnd)
-    crop, crop_mask = bbox_center_crop(img, full_mask, 320, bs[rnd])
+    crop, crop_mask,original_crop_mask = bbox_center_crop(img, full_mask, original_full_mask, 320, bs[rnd])
     crop.show()
     plt.imshow(crop_mask.numpy())
     plt.show()
 
 def test_crop_mask_dataset():
     ds = ImageCropWithBBoxMaskDataset('/home/snk/WindowsDisk/Download/KITTI/train.txt')
-    img, crop = ds[0]
+    # print (ds[0])
+    img, crop, o_crop = ds[0]
     print (img)
     print (crop)
     img.show()
-    plt.imshow(crop)
+    plt.imshow(o_crop.squeeze(0))
     plt.show()
     
 if __name__ == "__main__":
