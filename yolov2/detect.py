@@ -6,6 +6,61 @@ from utils import *
 from darknet import Darknet
 import pdb
 
+
+def get_darknet(cfgfile, weightfile):
+    global m
+    m = Darknet(cfgfile)
+
+    m.print_network()
+    m.load_weights(weightfile)
+    print('Loading weights from %s... Done!' % (weightfile))
+
+    if m.num_classes == 20:
+        namesfile = 'data/voc.names'
+    elif m.num_classes == 80:
+        namesfile = 'data/coco.names'
+    elif m.num_classes == 8:
+        namesfile = 'data/kitti.names'
+    else:
+        namesfile = 'data/names'
+    
+    use_cuda = 1
+    if use_cuda:
+        m.cuda()
+
+def get_bboxes(imgfile):
+    # m = Darknet(cfgfile)
+
+    # m.print_network()
+    # m.load_weights(weightfile)
+    # print('Loading weights from %s... Done!' % (weightfile))
+
+    # if m.num_classes == 20:
+    #     namesfile = 'data/voc.names'
+    # elif m.num_classes == 80:
+    #     namesfile = 'data/coco.names'
+    # elif m.num_classes == 8:
+    #     namesfile = 'data/kitti.names'
+    # else:
+    #     namesfile = 'data/names'
+    
+    use_cuda = 1
+    # if use_cuda:
+    #     m.cuda()
+
+    img = Image.open(imgfile).convert('RGB')
+    sized = img.resize((m.width, m.height))
+    # pdb.set_trace()
+
+    for i in range(3):
+        start = time.time()
+        boxes = do_detect(m, sized, 0.5, 0.4, use_cuda)
+        finish = time.time()
+        # if i == 1:
+            # print('%s: Predicted in %f seconds.' % (imgfile, (finish-start)))
+
+    return boxes
+
 def detect(cfgfile, weightfile, imgfile):
     m = Darknet(cfgfile)
 
@@ -38,6 +93,7 @@ def detect(cfgfile, weightfile, imgfile):
             print('%s: Predicted in %f seconds.' % (imgfile, (finish-start)))
 
     class_names = load_class_names(namesfile)
+    # pdb.set_trace()
     plot_boxes(img, boxes, 'predictions.png', class_names)
 
 def detect_cv2(cfgfile, weightfile, imgfile):

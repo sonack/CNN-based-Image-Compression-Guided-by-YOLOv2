@@ -4,6 +4,7 @@ import random
 import os
 from PIL import Image
 import numpy as np
+import pdb
 
 LABEL_PATH = "/home/snk/WindowsDisk/Download/KITTI/labels/"
 
@@ -84,6 +85,8 @@ def fill_truth_detection(labpath, w, h, flip, dx, dy, sx, sy):
     if os.path.getsize(labpath):
         bs = np.loadtxt(labpath)
         if bs is None:
+            print ('bs is None!!!')
+            pdb.set_trace()
             return label
         bs = np.reshape(bs, (-1, 5))
         cc = 0

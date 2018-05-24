@@ -1,0 +1,5 @@
+/home/snk/WindowsDisk/Download/KITTI/data_object_image_2/testing/image_2/000000.png
+/home/snk/WindowsDisk/Download/KITTI/data_object_image_2/testing/image_2/000001.png
+/home/snk/WindowsDisk/Download/KITTI/data_object_image_2/testing/image_2/000002.png
+/home/snk/WindowsDisk/Download/KITTI/data_object_image_2/testing/image_2/000003.png
+/home/snk/WindowsDisk/Download/KITTI/data_object_image_2/testing/image_2/000004.png

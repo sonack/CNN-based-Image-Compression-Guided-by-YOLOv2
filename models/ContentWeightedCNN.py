@@ -1,11 +1,12 @@
 #coding:utf-8
 from .BasicModule import BasicModule
+import torch as th
 from torch import nn
 from torch.nn import functional as F
 import sys
 import math
 
-sys.path.append("/home/zhangwenqiang/jobs/pytorch_implement")
+sys.path.append("/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/")
 from extend import RoundCuda, ImpMapCuda, LimuRound, Round
 
 from torch.nn.init import xavier_uniform
@@ -308,7 +309,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
     Learning Convolutional Networks for Content-weighted Image Compression 
     '''
     def __init__(self, use_imp = True, model_name = None):
-        super(ContentWeightedCNN, self).__init__()
+        super(ContentWeightedCNN_YOLO, self).__init__()
         self.model_name = model_name if model_name else 'CWCNN_with_YOLOv2'
         self.use_imp = use_imp
         self.encoder = self.make_encoder()
@@ -325,9 +326,15 @@ class ContentWeightedCNN_YOLO(BasicModule):
         mgdata = self.encoder(x)
         # print('mgdata size',mgdata.shape)
         if self.use_imp:
-            self.imp_mask_sigmoid = self.impmap_sigmoid(mgdata)
+            m = m.unsqueeze(1)
+            # print (m.size)
+            ex_mgdata = th.cat((mgdata, m), 1)
+            # pdb.set_trace()            
+            self.imp_mask_sigmoid = self.impmap_sigmoid(ex_mgdata)
+            # pdb.set_trace()
             masked_imp_map = (self.imp_mask_sigmoid * m).clamp(max=0.999999)
             self.imp_mask, self.imp_mask_height = self.impmap_expand(masked_imp_map)
+            # pdb.set_trace()
             enc_data = mgdata * self.imp_mask
         else:
             enc_data = mgdata
@@ -335,13 +342,15 @@ class ContentWeightedCNN_YOLO(BasicModule):
             dec_data = self.decoder(enc_data)
         # print ('dec_data size', dec_data.size())
         return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
         # return dec_data  # no_imp
 
 
 
     def make_impmap(self):
         layers = [
-            nn.Conv2d(64, 128, 3, 1, 1),
+            # 64 + 1 mask channel
+            nn.Conv2d(65, 128, 3, 1, 1),
             nn.ReLU(inplace=False),
             nn.Conv2d(128, 1, 1, 1, 0),
             nn.Sigmoid()
@@ -352,6 +361,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
 
     def make_encoder(self):
         layers = [
+            # changed to 4
             nn.Conv2d(3, 128, 8, 4, 2),
             nn.ReLU(inplace=False), # 54   # 128 -> 32
 
