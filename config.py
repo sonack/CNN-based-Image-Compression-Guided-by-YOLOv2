@@ -3,7 +3,7 @@ from __future__ import print_function
 import warnings
 
 class DefaultConfig(object):
-    GPU_HPC = True
+    GPU_HPC = False
     init_val = True
     exp_desc = "pretrain_wo_impmap"
 # lr decay controlled by file created

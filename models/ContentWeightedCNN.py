@@ -345,7 +345,10 @@ class ContentWeightedCNN_YOLO(BasicModule):
         if need_decode:
             dec_data = self.decoder(enc_data)
         # print ('dec_data size', dec_data.size())
-        return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        if self.use_imp:
+            return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        else:
+            return (dec_data, None)
         # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
         # return dec_data  # no_imp
 
