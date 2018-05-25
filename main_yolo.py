@@ -220,6 +220,9 @@ def train(**kwargs):
                 ))
 
         model.train()
+
+        if epoch == start_epoch + 1:
+            print ('Start training, please inspect log file %s!' % logfile_name)
         # mask is the detection bounding box mask
         for idx, (data, mask, o_mask) in enumerate(train_dataloader):
 
@@ -383,8 +386,7 @@ def train(**kwargs):
                 print ('Anneal lr to %.10f at epoch %d due to decay-file indicator.' % (lr, epoch))
                 ps.log ('Anneal lr to %.10f at epoch %d due to decay-file indicator.' % (lr, epoch))
 
-        if previous_loss == 1e100:
-            print ('Start training, please inspect log file %s!' % logfile_name)
+        
         previous_loss = total_loss_meter.value()[0]
 
 # TenCrop + Lambda

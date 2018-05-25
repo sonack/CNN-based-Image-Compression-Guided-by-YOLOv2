@@ -2,6 +2,8 @@
 from __future__ import print_function
 import warnings
 import getpass
+import os
+
 class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
     init_val = True
@@ -29,10 +31,10 @@ class DefaultConfig(object):
     batch_size = 32
     use_gpu = True
     num_workers = 8
-    max_epoch = 30*3
+    max_epoch = 30*10
     lr = 1e-4
     lr_decay = 0.1
-    lr_anneal_epochs = 30
+    lr_anneal_epochs = 3000
     use_early_adjust = False
     tolerant_max = 3
     weight_decay = 0
@@ -41,13 +43,14 @@ class DefaultConfig(object):
     eval_interval = 1
     print_smooth = True
 
-    plot_path = 'logs/plot/'
-    log_path = 'logs/log/'
+    plot_path = 'logs/plot/' + exp_desc
+    log_path = 'logs/log/' 
 # debug
     debug_file = "debug/info"
 # finetune
     # resume = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.01_gama=0.02/05-24/Cmpr_yolo_imp__r=0.01_gama=0.02_31_05-24_16:12:27.pth"
-    finetune = True  # continue training or finetune when given a resume file
+    resume = "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_no_imp_pretrain_wo_impmap/05-25/Cmpr_yolo_no_imp_pretrain_wo_impmap_24_05-25_16:42:12.pth"
+    finetune = False  # continue training or finetune when given a resume file
 
 # ---------------------------------------------------------
     def __getattr__(self, attr_name):
@@ -69,6 +72,9 @@ class DefaultConfig(object):
         print('Good Luck!')
         
 opt = DefaultConfig()
+if not os.path.exists(opt.plot_path):
+    print ('mkdir', opt.plot_path)
+    os.makedirs(opt.plot_path)
 
 
 if __name__ == '__main__':
