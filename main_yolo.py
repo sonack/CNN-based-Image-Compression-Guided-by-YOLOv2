@@ -53,7 +53,7 @@ def train(**kwargs):
 
 
     # step1: Model
-    model = getattr(models, opt.model)(use_imp = opt.use_imp, model_name="Cmpr_yolo_imp_" + opt.exp_desc + "_r={r}_gama={w}".format(
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num, model_name="Cmpr_yolo_imp_" + opt.exp_desc + "_r={r}_gama={w}".format(
                                                                 r=opt.rate_loss_threshold, 
                                                                 w=opt.rate_loss_weight)
                                                                 if opt.use_imp else "Cmpr_yolo_no_imp_" + opt.exp_desc)

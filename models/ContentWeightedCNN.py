@@ -56,6 +56,131 @@ def weights_initialization(m):
 
 
 
+
+
+
+# YOLOv2 combined
+class ContentWeightedCNN_YOLO(BasicModule):
+    '''
+    Learning Convolutional Networks for Content-weighted Image Compression 
+    '''
+    def __init__(self, use_imp = True, n = 64, model_name = None):
+        super(ContentWeightedCNN_YOLO, self).__init__()
+        self.model_name = model_name if model_name else 'CWCNN_with_YOLOv2'
+        self.use_imp = use_imp
+        self.encoder = self.make_encoder()
+        self.n = n
+        if use_imp:
+            self.impmap_sigmoid = self.make_impmap()
+            self.impmap_expand = ImpMapCuda(L = 16, n = n)
+        self.decoder = self.make_decoder()
+        self.reset_parameters()
+    
+    def reset_parameters(self):
+        self.apply(weights_initialization)
+    
+    def forward(self, x, m, need_decode = True):
+        # pdb.set_trace()
+        mgdata = self.encoder(x)
+        # mgdata = self.encoder(th.cat((x,o_m), 1))
+        # print('mgdata size',mgdata.shape)
+        if self.use_imp:
+            # m = m.unsqueeze(1)
+            # print (m.size)
+            # ex_mgdata = th.cat((mgdata, m), 1)
+            ex_mgdata = mgdata
+            # pdb.set_trace()            
+            self.imp_mask_sigmoid = self.impmap_sigmoid(ex_mgdata)
+            # pdb.set_trace()
+            masked_imp_map = (self.imp_mask_sigmoid * m).clamp(max=0.999999)
+            # masked_imp_map = self.imp_mask_sigmoid
+            self.imp_mask, self.imp_mask_height = self.impmap_expand(masked_imp_map)
+            # pdb.set_trace()
+            enc_data = mgdata * self.imp_mask
+        else:
+            enc_data = mgdata
+        if need_decode:
+            dec_data = self.decoder(enc_data)
+        # print ('dec_data size', dec_data.size())
+        if self.use_imp:
+            return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        else:
+            return (dec_data, None)
+        # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
+        # return dec_data  # no_imp
+
+
+
+    def make_impmap(self):
+        layers = [
+            # 64 + 1 mask channel
+            nn.Conv2d(self.n, 128, 3, 1, 1),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(128, 1, 1, 1, 0),
+            nn.Sigmoid()
+        ]
+        return nn.Sequential(*layers)
+
+
+
+    def make_encoder(self):
+        layers = [
+            # changed to 4
+            nn.Conv2d(3, 128, 8, 4, 2),
+            nn.ReLU(inplace=False), # 54   # 128 -> 32
+
+            ResidualBlock(128, 128),
+
+            nn.Conv2d(128, 256, 4, 2, 1), # 115  # 32 -> 16
+            nn.ReLU(inplace=False),
+
+            ResidualBlock(256, 256),
+
+            nn.Conv2d(256, 256, 3, 1, 1), #192  # 16 -> 16
+            nn.ReLU(inplace=False),
+
+            ResidualBlock(256, 256),
+
+            nn.Conv2d(256, self.n, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
+            nn.Sigmoid(),                    
+            # Round()                         # mgdata
+            RoundCuda()
+            # LimuRound(1-1e-10, 0.01)  # ratio, scale to fix grad
+        ]
+        return nn.Sequential(*layers)
+
+
+
+    def make_decoder(self):
+        layers = [
+            nn.Conv2d(self.n, 512, 3, 1, 1),
+            nn.ReLU(inplace=False),
+
+            ResidualBlock(512, 512),
+
+            nn.Conv2d(512, 512, 3, 1, 1),
+            nn.ReLU(inplace=False),
+
+            ResidualBlock(512, 512),
+
+            nn.PixelShuffle(2),  # 128 x 32 x 32
+
+            nn.Conv2d(128, 256, 3, 1, 1),
+            nn.ReLU(inplace=False),
+
+            ResidualBlock(256, 256),
+
+            nn.PixelShuffle(4),  # 256 x 128 x 128
+
+            nn.Conv2d(16, 32, 3, 1, 1),
+            nn.ReLU(inplace=False),
+            
+            nn.Conv2d(32, 3, 1, 1, 0) # 3 x 128 x 128
+        ]
+        return nn.Sequential(*layers)
+
+
+
 # Original Model
 class ContentWeightedCNN(BasicModule):
     '''
@@ -303,124 +428,7 @@ class ContentWeightedCNN_UNET(BasicModule):
             return d[3], d[0], d[1], d[2]
 
 
-# YOLOv2 combined
-class ContentWeightedCNN_YOLO(BasicModule):
-    '''
-    Learning Convolutional Networks for Content-weighted Image Compression 
-    '''
-    def __init__(self, use_imp = True, model_name = None):
-        super(ContentWeightedCNN_YOLO, self).__init__()
-        self.model_name = model_name if model_name else 'CWCNN_with_YOLOv2'
-        self.use_imp = use_imp
-        self.encoder = self.make_encoder()
-        if use_imp:
-            self.impmap_sigmoid = self.make_impmap()
-            self.impmap_expand = ImpMapCuda(L = 16, n = 64)
-        self.decoder = self.make_decoder()
-        self.reset_parameters()
-    
-    def reset_parameters(self):
-        self.apply(weights_initialization)
-    
-    def forward(self, x, m, need_decode = True):
-        # pdb.set_trace()
-        mgdata = self.encoder(x)
-        # mgdata = self.encoder(th.cat((x,o_m), 1))
-        # print('mgdata size',mgdata.shape)
-        if self.use_imp:
-            # m = m.unsqueeze(1)
-            # print (m.size)
-            # ex_mgdata = th.cat((mgdata, m), 1)
-            ex_mgdata = mgdata
-            # pdb.set_trace()            
-            self.imp_mask_sigmoid = self.impmap_sigmoid(ex_mgdata)
-            # pdb.set_trace()
-            masked_imp_map = (self.imp_mask_sigmoid * m).clamp(max=0.999999)
-            # masked_imp_map = self.imp_mask_sigmoid
-            self.imp_mask, self.imp_mask_height = self.impmap_expand(masked_imp_map)
-            # pdb.set_trace()
-            enc_data = mgdata * self.imp_mask
-        else:
-            enc_data = mgdata
-        if need_decode:
-            dec_data = self.decoder(enc_data)
-        # print ('dec_data size', dec_data.size())
-        if self.use_imp:
-            return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
-        else:
-            return (dec_data, None)
-        # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
-        # return dec_data  # no_imp
 
-
-
-    def make_impmap(self):
-        layers = [
-            # 64 + 1 mask channel
-            nn.Conv2d(64, 128, 3, 1, 1),
-            nn.ReLU(inplace=False),
-            nn.Conv2d(128, 1, 1, 1, 0),
-            nn.Sigmoid()
-        ]
-        return nn.Sequential(*layers)
-
-
-
-    def make_encoder(self):
-        layers = [
-            # changed to 4
-            nn.Conv2d(3, 128, 8, 4, 2),
-            nn.ReLU(inplace=False), # 54   # 128 -> 32
-
-            ResidualBlock(128, 128),
-
-            nn.Conv2d(128, 256, 4, 2, 1), # 115  # 32 -> 16
-            nn.ReLU(inplace=False),
-
-            ResidualBlock(256, 256),
-
-            nn.Conv2d(256, 256, 3, 1, 1), #192  # 16 -> 16
-            nn.ReLU(inplace=False),
-
-            ResidualBlock(256, 256),
-
-            nn.Conv2d(256, 64, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
-            nn.Sigmoid(),                    
-            # Round()                         # mgdata
-            RoundCuda()
-            # LimuRound(1-1e-10, 0.01)  # ratio, scale to fix grad
-        ]
-        return nn.Sequential(*layers)
-
-
-
-    def make_decoder(self):
-        layers = [
-            nn.Conv2d(64, 512, 3, 1, 1),
-            nn.ReLU(inplace=False),
-
-            ResidualBlock(512, 512),
-
-            nn.Conv2d(512, 512, 3, 1, 1),
-            nn.ReLU(inplace=False),
-
-            ResidualBlock(512, 512),
-
-            nn.PixelShuffle(2),  # 128 x 32 x 32
-
-            nn.Conv2d(128, 256, 3, 1, 1),
-            nn.ReLU(inplace=False),
-
-            ResidualBlock(256, 256),
-
-            nn.PixelShuffle(4),  # 256 x 128 x 128
-
-            nn.Conv2d(16, 32, 3, 1, 1),
-            nn.ReLU(inplace=False),
-            
-            nn.Conv2d(32, 3, 1, 1, 0) # 3 x 128 x 128
-        ]
-        return nn.Sequential(*layers)
 
 
 
