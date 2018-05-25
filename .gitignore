@@ -2,3 +2,4 @@ checkpoints/*
 datasets/*
 __pycache__/
 *.py[cod]
+logs/

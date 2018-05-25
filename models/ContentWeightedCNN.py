@@ -322,17 +322,21 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def reset_parameters(self):
         self.apply(weights_initialization)
     
-    def forward(self, x, o_m, m, need_decode = True):
-        mgdata = self.encoder(th.cat((x,o_m), 1))
+    def forward(self, x, m, need_decode = True):
+        # pdb.set_trace()
+        mgdata = self.encoder(x)
+        # mgdata = self.encoder(th.cat((x,o_m), 1))
         # print('mgdata size',mgdata.shape)
         if self.use_imp:
-            m = m.unsqueeze(1)
+            # m = m.unsqueeze(1)
             # print (m.size)
-            ex_mgdata = th.cat((mgdata, m), 1)
+            # ex_mgdata = th.cat((mgdata, m), 1)
+            ex_mgdata = mgdata
             # pdb.set_trace()            
             self.imp_mask_sigmoid = self.impmap_sigmoid(ex_mgdata)
             # pdb.set_trace()
             masked_imp_map = (self.imp_mask_sigmoid * m).clamp(max=0.999999)
+            # masked_imp_map = self.imp_mask_sigmoid
             self.imp_mask, self.imp_mask_height = self.impmap_expand(masked_imp_map)
             # pdb.set_trace()
             enc_data = mgdata * self.imp_mask
@@ -341,8 +345,8 @@ class ContentWeightedCNN_YOLO(BasicModule):
         if need_decode:
             dec_data = self.decoder(enc_data)
         # print ('dec_data size', dec_data.size())
-        # return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
-        return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
+        return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
         # return dec_data  # no_imp
 
 
@@ -350,7 +354,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def make_impmap(self):
         layers = [
             # 64 + 1 mask channel
-            nn.Conv2d(65, 128, 3, 1, 1),
+            nn.Conv2d(64, 128, 3, 1, 1),
             nn.ReLU(inplace=False),
             nn.Conv2d(128, 1, 1, 1, 0),
             nn.Sigmoid()
@@ -362,7 +366,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def make_encoder(self):
         layers = [
             # changed to 4
-            nn.Conv2d(4, 128, 8, 4, 2),
+            nn.Conv2d(3, 128, 8, 4, 2),
             nn.ReLU(inplace=False), # 54   # 128 -> 32
 
             ResidualBlock(128, 128),

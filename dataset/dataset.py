@@ -138,6 +138,12 @@ class ImageCropWithBBoxMaskDataset(Dataset):
             print ('Unknown source(train/test) of img!')
         img = Image.open(img_path)
         w, h = img.size
+        if not self.train:
+            if w % 8:
+                w -= w % 8
+            if h % 8:
+                h -= h % 8
+            img = img.crop((0,0,w,h))
         original_full_mask = th.ones((h,w))
         full_mask = th.ones((h//8, w//8))
         bs = np.array([])
@@ -154,7 +160,7 @@ class ImageCropWithBBoxMaskDataset(Dataset):
         if not self.train:
             if self.transform:
                 img = self.transform(img)
-            return (img, full_mask, original_full_mask)
+            return (img, full_mask, original_full_mask.unsqueeze(0))
         
         need_bbox_center_crop = num_objs and random.randint(0,10000) % 2 == 0
         # bbox center crop (must contain obj)
@@ -167,7 +173,7 @@ class ImageCropWithBBoxMaskDataset(Dataset):
             crop, crop_mask, original_crop_mask = random_pick_crop(img, full_mask, original_full_mask, self.crop_size)
         if self.transform:
             crop = self.transform(crop)
-        return (crop, crop_mask, original_crop_mask.unsqueeze(0))
+        return (crop, crop_mask.unsqueeze(0), original_crop_mask.unsqueeze(0))
         
 class ImageNet_200k(Dataset):
 

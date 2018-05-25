@@ -1,1 +1,0 @@
-05月24日 11:04:33 : Epoch 1/90, Iter 0/219, loss = 6251.52, mse_loss = 6251.48, rate_loss = 0.04, rate_display = 0.11, lr = 0.00010000
