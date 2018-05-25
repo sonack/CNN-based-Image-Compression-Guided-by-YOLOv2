@@ -6,12 +6,12 @@ import os
 
 class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
-    init_val = True
+    init_val = False
     exp_desc = "pretrain_wo_impmap_128"
     dataset_enable_bbox_center_crop = True
 # lr decay controlled by file created
     use_file_decay_lr = True
-    lr_decay_file = "signal/lr_decay"
+    lr_decay_file = "signal/lr_decay_" + exp_desc
 
 # model
     model = "ContentWeightedCNN_YOLO"
@@ -29,19 +29,20 @@ class DefaultConfig(object):
     train_data_list = "/home/snk/WindowsDisk/Download/KITTI/traintest.txt" if not GPU_HPC else "/share/Dataset/KITTI/traintest.txt"
     val_data_list = "/home/snk/WindowsDisk/Download/KITTI/val.txt" if not GPU_HPC else "/share/Dataset/KITTI/val.txt"
 # training
-    batch_size = 32
+    batch_size = 16  # 128-16, 64-32 
     use_gpu = True
     num_workers = 8
-    max_epoch = 30*10
+    max_epoch = 150*3
     lr = 1e-4
     lr_decay = 0.1
-    lr_anneal_epochs = 3000
+    lr_anneal_epochs = 150
     use_early_adjust = False
     tolerant_max = 3
     weight_decay = 0
 # display
     print_freq = 1
     eval_interval = 1
+    save_interval = 1
     print_smooth = True
 
     plot_path = 'logs/plot/' + exp_desc
@@ -49,8 +50,6 @@ class DefaultConfig(object):
 # debug
     debug_file = "debug/info"
 # finetune
-    # resume = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.01_gama=0.02/05-24/Cmpr_yolo_imp__r=0.01_gama=0.02_31_05-24_16:12:27.pth"
-    resume = "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_no_imp_pretrain_wo_impmap/05-25/Cmpr_yolo_no_imp_pretrain_wo_impmap_24_05-25_16:42:12.pth"
     finetune = False  # continue training or finetune when given a resume file
 
 # ---------------------------------------------------------

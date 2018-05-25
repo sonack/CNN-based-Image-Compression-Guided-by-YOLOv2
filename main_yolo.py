@@ -57,7 +57,7 @@ def train(**kwargs):
                                                                 r=opt.rate_loss_threshold, 
                                                                 w=opt.rate_loss_weight)
                                                                 if opt.use_imp else "Cmpr_yolo_no_imp_" + opt.exp_desc)
-    pdb.set_trace()
+    # pdb.set_trace()
     if opt.use_gpu:
         model = multiple_gpu_process(model)
     
@@ -290,10 +290,12 @@ def train(**kwargs):
                 if os.path.exists(opt.debug_file):
                     pdb.set_trace()
         
-        if use_data_parallel:
-            model.module.save(optimizer, epoch)
-        else:
-            model.save(optimizer, epoch)
+        if epoch % opt.save_interval == 0:
+            print ('save checkpoint file of epoch %d.' % epoch)
+            if use_data_parallel:
+                model.module.save(optimizer, epoch)
+            else:
+                model.save(optimizer, epoch)
 
         ps.make_plot('train mse loss')
         ps.make_plot('cur epoch train mse loss',epoch)
@@ -368,8 +370,10 @@ def train(**kwargs):
 
             else:
                 tolerant_now -= 1
-            
-        if same_lr_epoch and same_lr_epoch % opt.lr_anneal_epochs == 0:
+        
+        
+        if epoch % opt.lr_anneal_epochs == 0:
+        # if same_lr_epoch and same_lr_epoch % opt.lr_anneal_epochs == 0:
             same_lr_epoch = 0
             tolerant_now = 0
             lr = lr * opt.lr_decay

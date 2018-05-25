@@ -67,8 +67,8 @@ class ContentWeightedCNN_YOLO(BasicModule):
         self.use_imp = use_imp
         self.n = n
         self.encoder = self.make_encoder()
-        print ('self.n', self.n)
-        pdb.set_trace()
+        # print ('self.n', self.n)
+        # pdb.set_trace()
         if use_imp:
             self.impmap_sigmoid = self.make_impmap()
             self.impmap_expand = ImpMapCuda(L = 16, n = n)
