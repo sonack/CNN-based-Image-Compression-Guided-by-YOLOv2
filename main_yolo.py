@@ -22,7 +22,7 @@ from extend import RateLoss, LimuRateLoss
 import matplotlib.pyplot as plt
 import torch.backends.cudnn as cudnn
 import time
-from tqdm import tqdm
+# from tqdm import tqdm
 
 use_data_parallel = False
 def multiple_gpu_process(model):

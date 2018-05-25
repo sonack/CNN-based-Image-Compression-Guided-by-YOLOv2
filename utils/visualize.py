@@ -2,16 +2,16 @@
 from __future__ import print_function
 # import visdom
 import matplotlib
-# matplotlib.use('Agg')
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 import pdb
 import sys
-sys.path.append('/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/')
 from config import opt
+# sys.path.append('/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/')
 
 class Visualizer(object):
     '''

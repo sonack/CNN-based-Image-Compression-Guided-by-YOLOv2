@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 import random
 from PIL import Image
 import pdb
-
-TEST_LABEL_PATH = '/home/snk/WindowsDisk/Download/KITTI/test_labels/'
-TRAIN_GT_PATH = '/home/snk/WindowsDisk/Download/KITTI/labels/'
+from config import opt
+TEST_LABEL_PATH = '/home/snk/WindowsDisk/Download/KITTI/test_labels/' if not opt.GPU_HPC else "/share/Dataset/KITTI/test_labels/"
+TRAIN_GT_PATH = '/home/snk/WindowsDisk/Download/KITTI/labels/' if not opt.GPU_HPC else "/share/Dataset/KITTI/labels/"
 
 
 def generate_crop_mask(img_size, crop_region, full_mask, crop_size, original_crop = False):

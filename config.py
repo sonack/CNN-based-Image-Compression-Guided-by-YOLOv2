@@ -3,6 +3,7 @@ from __future__ import print_function
 import warnings
 
 class DefaultConfig(object):
+    GPU_HPC = True
     init_val = False
 # lr decay controlled by file created
     use_file_decay_lr = True
@@ -17,11 +18,11 @@ class DefaultConfig(object):
     rate_loss_weight = 0.02
     rate_loss_threshold = 0.01      # 0.643  
 # save path
-    test_imgs_save_path = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs"
+    test_imgs_save_path = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs" if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs"
     save_test_img = True
 # datasets
-    train_data_list = "/home/snk/WindowsDisk/Download/KITTI/train.txt"
-    val_data_list = "/home/snk/WindowsDisk/Download/KITTI/test.txt"
+    train_data_list = "/home/snk/WindowsDisk/Download/KITTI/train.txt" if not GPU_HPC else "/share/Dataset/KITTI/train.txt"
+    val_data_list = "/home/snk/WindowsDisk/Download/KITTI/test.txt" if not GPU_HPC else "/share/Dataset/KITTI/test.txt"
 # training
     batch_size = 32
     use_gpu = True

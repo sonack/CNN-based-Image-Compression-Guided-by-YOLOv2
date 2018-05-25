@@ -1,10 +1,10 @@
 import torch as th
 from torch.autograd import Variable, Function
 
-include_path = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/extend"
-import sys
-if include_path not in sys.path:
-    sys.path.append(include_path)
+# include_path = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/extend"
+# import sys
+# if include_path not in sys.path:
+#     sys.path.append(include_path)
 
 from round import round_forward_wrapper, round_backward_wrapper
 
