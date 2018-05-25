@@ -6,8 +6,11 @@ import os
 
 class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
-    init_val = False
-    exp_desc = "pretrain_wo_impmap_128"
+    only_init_val = False # not train
+    init_val = True
+    # exp_desc = "pretrain_wo_impmap_128"
+    # yolo rate loss and weighted mse loss
+    exp_desc = "yrl_and_wml"
     dataset_enable_bbox_center_crop = True
 # lr decay controlled by file created
     use_file_decay_lr = True
@@ -15,21 +18,21 @@ class DefaultConfig(object):
 
 # model
     model = "ContentWeightedCNN_YOLO"
-    use_imp = False
-    feat_num = 128  # defaut is 64
+    use_imp = True
+    feat_num = 64  # defaut is 64
 
     contrastive_degree = 4
-    mse_bbox_weight = 5
-    rate_loss_weight = 0.1
+    mse_bbox_weight = 25  # 25
+    rate_loss_weight = 0.15
     rate_loss_threshold = 0.2      # 0.643  
 # save path
     test_imgs_save_path = ("/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_" if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_") + exp_desc
-    save_test_img = True
+    save_test_img = False
 # datasets
     train_data_list = "/home/snk/WindowsDisk/Download/KITTI/traintest.txt" if not GPU_HPC else "/share/Dataset/KITTI/traintest.txt"
     val_data_list = "/home/snk/WindowsDisk/Download/KITTI/val.txt" if not GPU_HPC else "/share/Dataset/KITTI/val.txt"
 # training
-    batch_size = 16  # 128-16, 64-32 
+    batch_size = 32  # 128-16, 64-32 
     use_gpu = True
     num_workers = 8
     max_epoch = 150*3
@@ -50,6 +53,7 @@ class DefaultConfig(object):
 # debug
     debug_file = "debug/info"
 # finetune
+    # resume = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_180_05-25_21:34:37.pth" 
     finetune = False  # continue training or finetune when given a resume file
 
 # ---------------------------------------------------------

@@ -111,13 +111,13 @@ def train(**kwargs):
         # weight[weight!=opt.mse_bbox_weight] = 1
         # weight[weight==opt.mse_bbox_weight] = opt.mse_bbox_weight
         # print('max val', weight.max())    
-        return mse_loss(input, target)
-        # return t.sum(weight * (input - target) ** 2)
+        # return mse_loss(input, target)
+        return t.sum(weight * (input - target) ** 2)
 
     
     def yolo_rate_loss(imp_map, mask_r):
-        return rate_loss(imp_map)
-        # return YoloRateLoss(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
+        # return rate_loss(imp_map)
+        return YoloRateLoss(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
     
     
     lr = opt.lr
@@ -220,7 +220,11 @@ def train(**kwargs):
                     lr = lr,
                     val_mse_loss = mse_val_loss
                 ))
-
+    
+        if opt.only_init_val:
+            print ('Only Init Val Over!')
+            return 
+    
         model.train()
 
         if epoch == start_epoch + 1:
@@ -243,7 +247,7 @@ def train(**kwargs):
             # pdb.set_trace()
 
             optimizer.zero_grad()
-            reconstructed, imp_mask_sigmoid = model(data, mask)
+            reconstructed, imp_mask_sigmoid = model(data, mask, o_mask)
 
             # print ('imp_mask_height', model.imp_mask_height)
             # pdb.set_trace()
@@ -428,7 +432,7 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
             val_mask = val_mask.cuda(async=True)
             val_o_mask = val_o_mask.cuda(async=True)
 
-        reconstructed, imp_mask_sigmoid = model(val_data, val_mask)
+        reconstructed, imp_mask_sigmoid = model(val_data, val_mask, val_o_mask)
 
         batch_loss = mse_loss(reconstructed, val_data, val_o_mask)
         batch_caffe_loss = batch_loss / (2 * opt.batch_size)
@@ -452,6 +456,9 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
 
 # ''' used for just inference
 def test(model, dataloader):
+    def weighted_mse_loss(input, target, weight):
+        return t.sum(weight * (input - target) ** 2)
+    
     model.eval()
     avg_loss = 0
     progress_bar = tqdm(enumerate(dataloader), total=len(dataloader))
@@ -462,6 +469,7 @@ def test(model, dataloader):
             os.makedirs(opt.test_imgs_save_path)
     revert_transforms = transforms.Compose([
         transforms.Normalize((-1,-1,-1),(2,2,2)),
+        # transforms.Normalize([-0.485/0.229, -0.456/0.224, -0.406/0.225], [1/0.229, 1/0.224, 1/0.225]),
         transforms.ToPILImage()
     ])
 
@@ -469,7 +477,7 @@ def test(model, dataloader):
     psnr = lambda x,y: 10*math.log10(255. ** 2 / mse(x,y))
 
 
-    evaluate = False
+    evaluate = True
     mmse = 0
     mpsnr = 0
     mrate = 0
@@ -488,10 +496,10 @@ def test(model, dataloader):
             test_o_mask = test_o_mask.cuda(async=True)
         
         # pdb.set_trace()
-        reconstructed, imp_mask_sigmoid = model(test_data, test_mask)
+        reconstructed0, imp_mask_sigmoid = model(test_data, test_mask, test_o_mask)
         # clamp to [0.0,1.0]
         # print('min,max', reconstructed.min(), reconstructed.max())
-        reconstructed = t.clamp(reconstructed, -1.0, 1.0)
+        reconstructed = t.clamp(reconstructed0, -1.0, 1.0)
         # print('after clamped, min,max', reconstructed.min(), reconstructed.max())
 
         # pdb.set_trace()
@@ -512,11 +520,11 @@ def test(model, dataloader):
         if opt.save_test_img:
             img_reconstructed.save(os.path.join(opt.test_imgs_save_path, "%d_reconst.png" % idx))
         if evaluate:
-            origin_arr = np.array(img_origin)
-            reconst_arr = np.array(img_reconstructed)
-            
-            mmse += mse(origin_arr, reconst_arr)
-            mpsnr += psnr(origin_arr, reconst_arr)
+            # origin_arr = np.array(img_origin)
+            # reconst_arr = np.array(img_reconstructed)
+            mmse += weighted_mse_loss(reconstructed0, test_data, test_o_mask)
+            # mmse += mse(origin_arr, reconst_arr)
+            # mpsnr += psnr(origin_arr, reconst_arr)
 
     mmse /= len(progress_bar) * 1
     mpsnr /= len(progress_bar) * 1
@@ -525,13 +533,14 @@ def test(model, dataloader):
     print ('avg mse = {mse}, avg psnr = {psnr}, avg rate = {rate}'.format(mse = mmse, psnr = mpsnr, rate = mrate))
 
 def run_test():
-    model = getattr(models, opt.model)(use_imp = opt.use_imp)
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = 64)
     if opt.use_gpu:
         model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     
 
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
-    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_38_05-25_17:15:49.pth"
+    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_180_05-25_21:34:37.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/imagenet/ContentWeightedCNN_ImageNet_42_03-24_14:45:27.pth"
 
     model.load(None, test_ckpt)
 
@@ -539,6 +548,7 @@ def run_test():
         [
             transforms.ToTensor(),
             transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
     )
 

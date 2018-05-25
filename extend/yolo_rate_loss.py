@@ -54,7 +54,8 @@ class YoloRateLossFunction(th.autograd.Function):
 class YoloRateLoss(th.nn.Module):
     def __init__(self, r, r0, weight):
         super(YoloRateLoss, self).__init__()
-        self.r = r
+        # r must be a tensor, not Variable
+        self.r = r.data if hasattr(r,'data') else r
         self.r0 = r0
         self.weight = weight
     def forward(self, x):

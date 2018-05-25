@@ -78,10 +78,10 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def reset_parameters(self):
         self.apply(weights_initialization)
     
-    def forward(self, x, m, need_decode = True):
+    def forward(self, x, m, o_m, need_decode = True):
         # pdb.set_trace()
-        mgdata = self.encoder(x)
-        # mgdata = self.encoder(th.cat((x,o_m), 1))
+        # mgdata = self.encoder(x)
+        mgdata = self.encoder(th.cat((x,o_m), 1))
         # print('mgdata size',mgdata.shape)
         if self.use_imp:
             # m = m.unsqueeze(1)
@@ -91,8 +91,8 @@ class ContentWeightedCNN_YOLO(BasicModule):
             # pdb.set_trace()            
             self.imp_mask_sigmoid = self.impmap_sigmoid(ex_mgdata)
             # pdb.set_trace()
-            masked_imp_map = (self.imp_mask_sigmoid * m).clamp(max=0.999999)
-            # masked_imp_map = self.imp_mask_sigmoid
+            # masked_imp_map = (self.imp_mask_sigmoid * m).clamp(max=0.999999)
+            masked_imp_map = self.imp_mask_sigmoid
             self.imp_mask, self.imp_mask_height = self.impmap_expand(masked_imp_map)
             # pdb.set_trace()
             enc_data = mgdata * self.imp_mask
@@ -103,9 +103,9 @@ class ContentWeightedCNN_YOLO(BasicModule):
         # print ('dec_data size', dec_data.size())
         if self.use_imp:
             return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+            # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)
         else:
             return (dec_data, None)
-        # return (dec_data, masked_imp_map) if need_decode else (enc_data, self.imp_mask_height)        
         # return dec_data  # no_imp
 
 
@@ -125,7 +125,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def make_encoder(self):
         layers = [
             # changed to 4
-            nn.Conv2d(3, 128, 8, 4, 2),
+            nn.Conv2d(4, 128, 8, 4, 2),
             nn.ReLU(inplace=False), # 54   # 128 -> 32
 
             ResidualBlock(128, 128),
