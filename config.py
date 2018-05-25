@@ -1,9 +1,9 @@
 #coding:utf8
 from __future__ import print_function
 import warnings
-
+import getpass
 class DefaultConfig(object):
-    GPU_HPC = False
+    GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
     init_val = True
     exp_desc = "pretrain_wo_impmap"
 # lr decay controlled by file created
