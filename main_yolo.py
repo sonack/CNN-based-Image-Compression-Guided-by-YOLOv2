@@ -57,6 +57,7 @@ def train(**kwargs):
                                                                 r=opt.rate_loss_threshold, 
                                                                 w=opt.rate_loss_weight)
                                                                 if opt.use_imp else "Cmpr_yolo_no_imp_" + opt.exp_desc)
+    pdb.set_trace()
     if opt.use_gpu:
         model = multiple_gpu_process(model)
     

@@ -56,9 +56,6 @@ def weights_initialization(m):
 
 
 
-
-
-
 # YOLOv2 combined
 class ContentWeightedCNN_YOLO(BasicModule):
     '''
@@ -68,8 +65,10 @@ class ContentWeightedCNN_YOLO(BasicModule):
         super(ContentWeightedCNN_YOLO, self).__init__()
         self.model_name = model_name if model_name else 'CWCNN_with_YOLOv2'
         self.use_imp = use_imp
-        self.encoder = self.make_encoder()
         self.n = n
+        self.encoder = self.make_encoder()
+        print ('self.n', self.n)
+        pdb.set_trace()
         if use_imp:
             self.impmap_sigmoid = self.make_impmap()
             self.impmap_expand = ImpMapCuda(L = 16, n = n)
@@ -178,7 +177,6 @@ class ContentWeightedCNN_YOLO(BasicModule):
             nn.Conv2d(32, 3, 1, 1, 0) # 3 x 128 x 128
         ]
         return nn.Sequential(*layers)
-
 
 
 # Original Model
@@ -426,15 +424,3 @@ class ContentWeightedCNN_UNET(BasicModule):
             return d[3]
         else:
             return d[3], d[0], d[1], d[2]
-
-
-
-
-
-
-
-        
-
-    
-
-
