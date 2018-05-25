@@ -4,7 +4,7 @@ import warnings
 
 class DefaultConfig(object):
     GPU_HPC = True
-    init_val = False
+    init_val = True
     exp_desc = "pretrain_wo_impmap"
 # lr decay controlled by file created
     use_file_decay_lr = True
@@ -22,8 +22,8 @@ class DefaultConfig(object):
     test_imgs_save_path = ("/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_" if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_") + exp_desc
     save_test_img = True
 # datasets
-    train_data_list = "/home/snk/WindowsDisk/Download/KITTI/train.txt" if not GPU_HPC else "/share/Dataset/KITTI/train.txt"
-    val_data_list = "/home/snk/WindowsDisk/Download/KITTI/test.txt" if not GPU_HPC else "/share/Dataset/KITTI/test.txt"
+    train_data_list = "/home/snk/WindowsDisk/Download/KITTI/traintest.txt" if not GPU_HPC else "/share/Dataset/KITTI/traintest.txt"
+    val_data_list = "/home/snk/WindowsDisk/Download/KITTI/val.txt" if not GPU_HPC else "/share/Dataset/KITTI/val.txt"
 # training
     batch_size = 32
     use_gpu = True
@@ -36,7 +36,7 @@ class DefaultConfig(object):
     tolerant_max = 3
     weight_decay = 0
 # display
-    print_freq = 10
+    print_freq = 1
     eval_interval = 1
     print_smooth = True
 

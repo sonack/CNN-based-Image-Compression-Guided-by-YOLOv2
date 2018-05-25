@@ -384,8 +384,8 @@ class ContentWeightedCNN_YOLO(BasicModule):
             nn.Conv2d(256, 64, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
             nn.Sigmoid(),                    
             # Round()                         # mgdata
-            # RoundCuda()
-            LimuRound(1-1e-10, 0.01)  # ratio, scale to fix grad
+            RoundCuda()
+            # LimuRound(1-1e-10, 0.01)  # ratio, scale to fix grad
         ]
         return nn.Sequential(*layers)
 

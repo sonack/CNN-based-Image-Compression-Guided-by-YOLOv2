@@ -1,5 +1,7 @@
 #coding:utf8
 from __future__ import print_function
+import matplotlib
+matplotlib.use('Agg')
 from config import opt
 import os
 import numpy as np
@@ -53,7 +55,7 @@ def train(**kwargs):
     model = getattr(models, opt.model)(use_imp = opt.use_imp, model_name="Cmpr_yolo_imp_" + opt.exp_desc + "_r={r}_gama={w}".format(
                                                                 r=opt.rate_loss_threshold, 
                                                                 w=opt.rate_loss_weight)
-                                                                if opt.use_imp else "Cmpr_yolo_no_imp")
+                                                                if opt.use_imp else "Cmpr_yolo_no_imp_" + opt.exp_desc)
     if opt.use_gpu:
         model = multiple_gpu_process(model)
     
