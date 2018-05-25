@@ -7,7 +7,7 @@ import os
 class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
     init_val = True
-    exp_desc = "pretrain_wo_impmap"
+    exp_desc = "pretrain_wo_impmap_128"
     dataset_enable_bbox_center_crop = True
 # lr decay controlled by file created
     use_file_decay_lr = True
@@ -16,6 +16,7 @@ class DefaultConfig(object):
 # model
     model = "ContentWeightedCNN_YOLO"
     use_imp = False
+    feat_num = 128  # defaut is 64
 
     contrastive_degree = 4
     mse_bbox_weight = 5
