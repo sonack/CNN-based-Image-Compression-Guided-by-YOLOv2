@@ -6,6 +6,7 @@ class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
     init_val = True
     exp_desc = "pretrain_wo_impmap"
+    dataset_enable_bbox_center_crop = True
 # lr decay controlled by file created
     use_file_decay_lr = True
     lr_decay_file = "signal/lr_decay"

@@ -162,7 +162,11 @@ class ImageCropWithBBoxMaskDataset(Dataset):
                 img = self.transform(img)
             return (img, full_mask, original_full_mask.unsqueeze(0))
         
-        need_bbox_center_crop = num_objs and random.randint(0,10000) % 2 == 0
+        if opt.dataset_enable_bbox_center_crop:
+            need_bbox_center_crop = num_objs and random.randint(0,10000) % 2 == 0
+        else:
+            need_bbox_center_crop = False
+        
         # bbox center crop (must contain obj)
         if need_bbox_center_crop:
             # print ('center')
