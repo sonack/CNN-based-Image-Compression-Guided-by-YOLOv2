@@ -24,7 +24,8 @@ from extend import RateLoss, LimuRateLoss, YoloRateLoss
 import matplotlib.pyplot as plt
 import torch.backends.cudnn as cudnn
 import time
-# from tqdm import tqdm
+if not opt.GPU_HPC:
+    from tqdm import tqdm
 
 use_data_parallel = False
 def multiple_gpu_process(model):
@@ -524,7 +525,8 @@ def run_test():
         model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     
 
-    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
+    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_38_05-25_17:15:49.pth"
 
     model.load(None, test_ckpt)
 
