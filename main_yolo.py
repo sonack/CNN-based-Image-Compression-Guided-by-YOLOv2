@@ -18,7 +18,7 @@ import pdb
 # import cv2
 
 from utils.visualize import Visualizer, PlotSaver
-from extend import RateLoss, LimuRateLoss
+from extend import RateLoss, LimuRateLoss, YoloRateLoss
 import matplotlib.pyplot as plt
 import torch.backends.cudnn as cudnn
 import time
@@ -45,12 +45,12 @@ def multiple_gpu_process(model):
 def train(**kwargs):
     opt.parse(kwargs)
     # log file
-    logfile_name = "Cmpr_with_YOLOv2_"+time.strftime("_%m_%d_%H:%M:%S")+".log.txt"
+    logfile_name = "Cmpr_with_YOLOv2_" + opt.exp_desc + time.strftime("_%m_%d_%H:%M:%S")+".log.txt"
     ps = PlotSaver(logfile_name)
 
 
     # step1: Model
-    model = getattr(models, opt.model)(use_imp = opt.use_imp, model_name="Cmpr_yolo_imp__r={r}_gama={w}".format(
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, model_name="Cmpr_yolo_imp_" + opt.exp_desc + "_r={r}_gama={w}".format(
                                                                 r=opt.rate_loss_threshold, 
                                                                 w=opt.rate_loss_weight)
                                                                 if opt.use_imp else "Cmpr_yolo_no_imp")
@@ -96,18 +96,27 @@ def train(**kwargs):
     # step3: criterion and optimizer
 
     mse_loss = t.nn.MSELoss(size_average = False)
-    def weighted_mse_loss(input, target, weight):
-        return t.sum(weight * (input - target) ** 2)
 
     if opt.use_imp:
         # TODO: new rate loss
         rate_loss = RateLoss(opt.rate_loss_threshold, opt.rate_loss_weight)        
         # rate_loss = LimuRateLoss(opt.rate_loss_threshold, opt.rate_loss_weight)
 
-    lr = opt.lr
 
+    def weighted_mse_loss(input, target, weight):
+        # weight[weight!=opt.mse_bbox_weight] = 1
+        # weight[weight==opt.mse_bbox_weight] = opt.mse_bbox_weight
+        # print('max val', weight.max())    
+        return mse_loss(input, target)
+        # return t.sum(weight * (input - target) ** 2)
 
     
+    def yolo_rate_loss(imp_map, mask_r):
+        return rate_loss(imp_map)
+        # return YoloRateLoss(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
+    
+    
+    lr = opt.lr
     optimizer = t.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
 
     start_epoch = 0
@@ -174,7 +183,7 @@ def train(**kwargs):
         if (epoch == start_epoch + 1) and opt.init_val:
             print ('Init validation ... ')
             if opt.use_imp:
-                mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, weighted_mse_loss, rate_loss, ps)
+                mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, weighted_mse_loss, yolo_rate_loss, ps)
             else:
                 mse_val_loss = val(model, val_dataloader, weighted_mse_loss, None, ps)
         
@@ -216,7 +225,7 @@ def train(**kwargs):
 
             data = Variable(data)
             mask = Variable(mask)
-            o_mask = Variable(o_mask)
+            o_mask = Variable(o_mask, requires_grad=False)
             
             
             if opt.use_gpu:
@@ -227,19 +236,21 @@ def train(**kwargs):
             # pdb.set_trace()
 
             optimizer.zero_grad()
-            reconstructed, imp_mask_sigmoid = model(data, o_mask, mask)
+            reconstructed, imp_mask_sigmoid = model(data, mask)
 
             # print ('imp_mask_height', model.imp_mask_height)
             # pdb.set_trace()
 
             # print ('type recons', type(reconstructed.data))
+            
             loss = weighted_mse_loss(reconstructed, data, o_mask)
             # loss = mse_loss(reconstructed, data)
             caffe_loss = loss / (2 * opt.batch_size)
             
             if opt.use_imp:
                 rate_loss_display = imp_mask_sigmoid
-                rate_loss_ =  rate_loss(rate_loss_display)
+                # rate_loss_ =  rate_loss(rate_loss_display)
+                rate_loss_ = yolo_rate_loss(rate_loss_display, mask)
                 total_loss = caffe_loss + rate_loss_
             else:
                 total_loss = caffe_loss
@@ -284,51 +295,53 @@ def train(**kwargs):
             ps.make_plot("train rate loss")
             ps.make_plot("train total loss")
 
-        print ('Validating ...')
 
-        # val 
-        if opt.use_imp:
-            mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, weighted_mse_loss, rate_loss, ps)
-        else:
-            mse_val_loss = val(model, val_dataloader, weighted_mse_loss, None, ps)
-    
-        ps.add_point('val mse loss', mse_val_loss)
-        if opt.use_imp:
-            ps.add_point('val rate value', rate_val_display)
-            ps.add_point('val rate loss', rate_val_loss)
-            ps.add_point('val total loss', total_val_loss)
+        if epoch % opt.eval_interval == 0:
+
+            print ('Validating ...')
+            # val 
+            if opt.use_imp:
+                mse_val_loss, rate_val_loss, total_val_loss, rate_val_display = val(model, val_dataloader, weighted_mse_loss, yolo_rate_loss, ps)
+            else:
+                mse_val_loss = val(model, val_dataloader, weighted_mse_loss, None, ps)
         
+            ps.add_point('val mse loss', mse_val_loss)
+            if opt.use_imp:
+                ps.add_point('val rate value', rate_val_display)
+                ps.add_point('val rate loss', rate_val_loss)
+                ps.add_point('val total loss', total_val_loss)
+            
 
-        ps.make_plot('val mse loss')
+            ps.make_plot('val mse loss')
 
-        if opt.use_imp:
-            ps.make_plot('val rate value')
-            ps.make_plot('val rate loss')
-            ps.make_plot('val total loss')
+            if opt.use_imp:
+                ps.make_plot('val rate value')
+                ps.make_plot('val rate loss')
+                ps.make_plot('val total loss')
 
-        # log sth.
-        if opt.use_imp:
-            ps.log('Epoch:{epoch}, lr:{lr}, train_mse_loss: {train_mse_loss}, train_rate_loss: {train_rate_loss}, train_total_loss: {train_total_loss}, train_rate_display: {train_rate_display} \n\
-val_mse_loss: {val_mse_loss}, val_rate_loss: {val_rate_loss}, val_total_loss: {val_total_loss}, val_rate_display: {val_rate_display} '.format(
-                epoch = epoch,
-                lr = lr,
-                train_mse_loss = mse_loss_meter.value()[0],
-                train_rate_loss = rate_loss_meter.value()[0],
-                train_total_loss = total_loss_meter.value()[0],
-                train_rate_display = rate_display_meter.value()[0],
+            # log sth.
+            if opt.use_imp:
+                ps.log('Epoch:{epoch}, lr:{lr}, train_mse_loss: {train_mse_loss}, train_rate_loss: {train_rate_loss}, train_total_loss: {train_total_loss}, train_rate_display: {train_rate_display} \n\
+    val_mse_loss: {val_mse_loss}, val_rate_loss: {val_rate_loss}, val_total_loss: {val_total_loss}, val_rate_display: {val_rate_display} '.format(
+                    epoch = epoch,
+                    lr = lr,
+                    train_mse_loss = mse_loss_meter.value()[0],
+                    train_rate_loss = rate_loss_meter.value()[0],
+                    train_total_loss = total_loss_meter.value()[0],
+                    train_rate_display = rate_display_meter.value()[0],
 
-                val_mse_loss = mse_val_loss,
-                val_rate_loss = rate_val_loss,
-                val_total_loss = total_val_loss,
-                val_rate_display = rate_val_display
-            ))
-        else:
-            ps.log('Epoch:{epoch}, lr:{lr}, train_mse_loss:{train_mse_loss}, val_mse_loss:{val_mse_loss}'.format(
-                epoch = epoch,
-                lr = lr,
-                train_mse_loss = mse_loss_meter.value()[0],
-                val_mse_loss = mse_val_loss
-            ))
+                    val_mse_loss = mse_val_loss,
+                    val_rate_loss = rate_val_loss,
+                    val_total_loss = total_val_loss,
+                    val_rate_display = rate_val_display
+                ))
+            else:
+                ps.log('Epoch:{epoch}, lr:{lr}, train_mse_loss:{train_mse_loss}, val_mse_loss:{val_mse_loss}'.format(
+                    epoch = epoch,
+                    lr = lr,
+                    train_mse_loss = mse_loss_meter.value()[0],
+                    val_mse_loss = mse_val_loss
+                ))
 
         # Adaptive adjust lr
         # 每个lr，如果有opt.tolerant_max次比上次的val_loss还高， 
@@ -412,7 +425,7 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
 
         if opt.use_imp and rate_loss:
             rate_loss_display = imp_mask_sigmoid
-            rate_loss_value =  rate_loss(rate_loss_display)
+            rate_loss_value =  rate_loss(rate_loss_display, val_mask)
             total_loss = batch_caffe_loss + rate_loss_value
     
         mse_loss_meter.add(batch_caffe_loss.data[0])
@@ -434,6 +447,9 @@ def test(model, dataloader):
     progress_bar = tqdm(enumerate(dataloader), total=len(dataloader))
 
 
+    if opt.save_test_img:
+        if not os.path.exists(opt.test_imgs_save_path):
+            os.makedirs(opt.test_imgs_save_path)
     revert_transforms = transforms.Compose([
         transforms.Normalize((-1,-1,-1),(2,2,2)),
         transforms.ToPILImage()
@@ -450,6 +466,10 @@ def test(model, dataloader):
     for idx, (data, mask, o_mask) in progress_bar:
         test_data = Variable(data, volatile=True)
         test_mask = Variable(mask, volatile=True)
+        # pdb.set_trace()
+        # mask[mask==1] = 0
+        # mask[mask==opt.contrastive_degree] = 1
+        # print ('type.mask', type(mask))
         test_o_mask = Variable(o_mask, volatile=True)
         # pdb.set_trace()
         if opt.use_gpu:
@@ -457,14 +477,16 @@ def test(model, dataloader):
             test_mask = test_mask.cuda(async=True)
             test_o_mask = test_o_mask.cuda(async=True)
         
+        # pdb.set_trace()
         reconstructed, imp_mask_sigmoid = model(test_data, test_mask)
         # clamp to [0.0,1.0]
         # print('min,max', reconstructed.min(), reconstructed.max())
         reconstructed = t.clamp(reconstructed, -1.0, 1.0)
         # print('after clamped, min,max', reconstructed.min(), reconstructed.max())
 
-
+        # pdb.set_trace()
         if opt.use_imp:
+            # mrate += (imp_mask_sigmoid.data[0]*(1-mask)).sum() / ((mask == 0).sum())
             mrate += imp_mask_sigmoid.data.mean()
             imp_map = transforms.ToPILImage()(imp_mask_sigmoid.data.cpu()[0])
             imp_map = imp_map.resize((imp_map.size[0]*8, imp_map.size[1]*8))
@@ -498,8 +520,7 @@ def run_test():
         model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     
 
-    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp__r=0.122_gama=0.2/05-24/Cmpr_yolo_imp__r=0.122_gama=0.2_61_05-24_14:35:40.pth"
-
+    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
 
     model.load(None, test_ckpt)
 
