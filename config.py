@@ -6,11 +6,15 @@ import os
 
 class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
+
+    input_4_ch = False
     only_init_val = False # not train
     init_val = True
     # exp_desc = "pretrain_wo_impmap_128"
     # yolo rate loss and weighted mse loss
-    exp_desc = "yrl2_and_wml_r=0.2_gm=0.2"    
+    # exp_desc = "yrl2_and_wml_r=0.2_gm=0.2"    
+    exp_desc = 'pretrain_w_impmap_64_r=0.2_gm=0.2'
+    # resume = ""
     # exp_desc = "yrl_noimp_w=50"
 
 
@@ -25,7 +29,7 @@ class DefaultConfig(object):
     feat_num = 64  # defaut is 64
 
     contrastive_degree = 0  # yrlv2 required
-    mse_bbox_weight = 50  # 25
+    mse_bbox_weight = 1  # 25  1=original mse loss
     rate_loss_weight = 0.2
     rate_loss_threshold = 0.2      # 0.643  
 # save path

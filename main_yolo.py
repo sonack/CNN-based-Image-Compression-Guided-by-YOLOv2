@@ -53,7 +53,7 @@ def train(**kwargs):
 
 
     # step1: Model
-    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num, model_name="Cmpr_yolo_imp_" + opt.exp_desc + "_r={r}_gama={w}".format(
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num, input_4_ch = opt.input_4_ch, model_name="Cmpr_yolo_imp_" + opt.exp_desc + "_r={r}_gama={w}".format(
                                                                 r=opt.rate_loss_threshold, 
                                                                 w=opt.rate_loss_weight)
                                                                 if opt.use_imp else "Cmpr_yolo_no_imp_" + opt.exp_desc)
@@ -116,9 +116,9 @@ def train(**kwargs):
 
     
     def yolo_rate_loss(imp_map, mask_r):
-        # return rate_loss(imp_map)
+        return rate_loss(imp_map)
         # V2 contrastive_degree must be 0! 
-        return YoloRateLossV2(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
+        # return YoloRateLossV2(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
     
     
     lr = opt.lr
@@ -547,7 +547,7 @@ def test(model, dataloader):
     print ('avg mse = {mse}, avg psnr = {psnr}, avg rate = {rate}'.format(mse = mmse, psnr = mpsnr, rate = mrate))
 
 def run_test():
-    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = 64)
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = 64, input_4_ch=False)
     if opt.use_gpu:
         model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     

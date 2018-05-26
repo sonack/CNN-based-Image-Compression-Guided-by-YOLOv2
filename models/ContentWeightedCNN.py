@@ -12,6 +12,7 @@ from extend import RoundCuda, ImpMapCuda, LimuRound, Round
 from torch.nn.init import xavier_uniform
 
 import pdb
+from config import opt
 
 class ResidualBlock(nn.Module):
     '''
@@ -61,11 +62,12 @@ class ContentWeightedCNN_YOLO(BasicModule):
     '''
     Learning Convolutional Networks for Content-weighted Image Compression 
     '''
-    def __init__(self, use_imp = True, n = 64, model_name = None):
+    def __init__(self, use_imp = True, n = 64, input_4_ch = True, model_name = None):
         super(ContentWeightedCNN_YOLO, self).__init__()
         self.model_name = model_name if model_name else 'CWCNN_with_YOLOv2'
         self.use_imp = use_imp
         self.n = n
+        self.input_4_ch = input_4_ch
         self.encoder = self.make_encoder()
         # print ('self.n', self.n)
         # pdb.set_trace()
@@ -80,8 +82,11 @@ class ContentWeightedCNN_YOLO(BasicModule):
     
     def forward(self, x, m, o_m, need_decode = True):
         # pdb.set_trace()
-        # mgdata = self.encoder(x)
-        mgdata = self.encoder(th.cat((x,o_m), 1))
+        if self.input_4_ch:
+            mgdata = self.encoder(th.cat((x,o_m), 1))
+        else:
+            mgdata = self.encoder(x)
+       
         # print('mgdata size',mgdata.shape)
         if self.use_imp:
             # m = m.unsqueeze(1)
@@ -125,7 +130,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def make_encoder(self):
         layers = [
             # changed to 4
-            nn.Conv2d(4, 128, 8, 4, 2),
+            nn.Conv2d(4 if self.input_4_ch else 3, 128, 8, 4, 2),
             nn.ReLU(inplace=False), # 54   # 128 -> 32
 
             ResidualBlock(128, 128),
