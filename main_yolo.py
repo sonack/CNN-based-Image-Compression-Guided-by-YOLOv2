@@ -20,7 +20,7 @@ import pdb
 # import cv2
 
 from utils.visualize import Visualizer, PlotSaver
-from extend import RateLoss, LimuRateLoss, YoloRateLoss
+from extend import RateLoss, LimuRateLoss, YoloRateLoss, YoloRateLossV2
 import matplotlib.pyplot as plt
 import torch.backends.cudnn as cudnn
 import time
@@ -117,7 +117,8 @@ def train(**kwargs):
     
     def yolo_rate_loss(imp_map, mask_r):
         # return rate_loss(imp_map)
-        return YoloRateLoss(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
+        # V2 contrastive_degree must be 0! 
+        return YoloRateLossV2(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
     
     
     lr = opt.lr
@@ -488,12 +489,25 @@ def test(model, dataloader):
         # mask[mask==1] = 0
         # mask[mask==opt.contrastive_degree] = 1
         # print ('type.mask', type(mask))
+        
+
+        o_mask_as_weight = o_mask.clone()
+        # pdb.set_trace()
+        # bbox_inner = (o_mask == opt.mse_bbox_weight)
+        # bbox_outer = (o_mask == 1)
+        # o_mask[bbox_inner] = 1
+        # o_mask[bbox_outer] = opt.mse_bbox_weight
+        # print (o_mask)
+        # pdb.set_trace()
+        o_mask[...] = 1
         test_o_mask = Variable(o_mask, volatile=True)
+        test_o_mask_as_weight = Variable(o_mask_as_weight, volatile=True)
         # pdb.set_trace()
         if opt.use_gpu:
             test_data = test_data.cuda(async=True)
             test_mask = test_mask.cuda(async=True)
             test_o_mask = test_o_mask.cuda(async=True)
+            test_o_mask_as_weight = test_o_mask_as_weight.cuda(async=True)
         
         # pdb.set_trace()
         reconstructed0, imp_mask_sigmoid = model(test_data, test_mask, test_o_mask)
@@ -522,7 +536,7 @@ def test(model, dataloader):
         if evaluate:
             # origin_arr = np.array(img_origin)
             # reconst_arr = np.array(img_reconstructed)
-            mmse += weighted_mse_loss(reconstructed0, test_data, test_o_mask)
+            mmse += weighted_mse_loss(reconstructed0, test_data, test_o_mask_as_weight)
             # mmse += mse(origin_arr, reconst_arr)
             # mpsnr += psnr(origin_arr, reconst_arr)
 
@@ -541,7 +555,10 @@ def run_test():
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
     test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_180_05-25_21:34:37.pth"
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/imagenet/ContentWeightedCNN_ImageNet_42_03-24_14:45:27.pth"
-
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl_noimp_w=50/Cmpr_yolo_no_imp_yrl_and_wml_no_imp_weight=50_189_05-26_09:26:16.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_yrl_and_wml_r=0.2_gama=0.15/05-26/Cmpr_yolo_imp_yrl_and_wml_r=0.2_gama=0.15_25_05-26_00:58:36.pth"
+    
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl_noimp_w=25/Cmpr_yolo_no_imp_yrl_and_wml_no_imp_187_05-26_09:58:35.pth"
     model.load(None, test_ckpt)
 
     test_transforms = transforms.Compose(
@@ -553,7 +570,7 @@ def run_test():
     )
 
     run_test_data_list = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/my_test.txt"
-    test_data = ImageCropWithBBoxMaskDataset(run_test_data_list, test_transforms, contrastive_degree=opt.contrastive_degree, train=False)
+    test_data = ImageCropWithBBoxMaskDataset(run_test_data_list, test_transforms, contrastive_degree=opt.contrastive_degree, mse_bbox_weight = opt.mse_bbox_weight, train=False)
     test_dataloader = DataLoader(test_data, 1, shuffle = False)
     test(model, test_dataloader)
 # '''

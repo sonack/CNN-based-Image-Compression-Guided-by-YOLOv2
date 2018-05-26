@@ -10,7 +10,10 @@ class DefaultConfig(object):
     init_val = True
     # exp_desc = "pretrain_wo_impmap_128"
     # yolo rate loss and weighted mse loss
-    exp_desc = "yrl_and_wml"
+    exp_desc = "yrl2_and_wml_r=0.2_gm=0.2"    
+    # exp_desc = "yrl_noimp_w=50"
+
+
     dataset_enable_bbox_center_crop = True
 # lr decay controlled by file created
     use_file_decay_lr = True
@@ -21,13 +24,13 @@ class DefaultConfig(object):
     use_imp = True
     feat_num = 64  # defaut is 64
 
-    contrastive_degree = 4
-    mse_bbox_weight = 25  # 25
-    rate_loss_weight = 0.15
+    contrastive_degree = 0  # yrlv2 required
+    mse_bbox_weight = 50  # 25
+    rate_loss_weight = 0.2
     rate_loss_threshold = 0.2      # 0.643  
 # save path
     test_imgs_save_path = ("/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_" if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_") + exp_desc
-    save_test_img = False
+    save_test_img = True
 # datasets
     train_data_list = "/home/snk/WindowsDisk/Download/KITTI/traintest.txt" if not GPU_HPC else "/share/Dataset/KITTI/traintest.txt"
     val_data_list = "/home/snk/WindowsDisk/Download/KITTI/val.txt" if not GPU_HPC else "/share/Dataset/KITTI/val.txt"
