@@ -24,8 +24,10 @@ class ResidualBlock(nn.Module):
         super(ResidualBlock, self).__init__()
         self.left = nn.Sequential(
             nn.Conv2d(ch_in, 128, 3, 1, 1),  # ch_in, ch_out, kernel_size, stride, pad
+            # nn.BatchNorm2d(128),
             nn.ReLU(inplace=False),
             nn.Conv2d(128, ch_out, 3, 1, 1),
+            # nn.BatchNorm2d(ch_out),
             nn.ReLU(inplace=False),
         )
         self.right = shortcut
@@ -69,8 +71,11 @@ class ContentWeightedCNN_YOLO(BasicModule):
         self.n = n
         self.input_4_ch = input_4_ch
         self.encoder = self.make_encoder()
+        # self.round = RoundCuda()
         # print ('self.n', self.n)
         # pdb.set_trace()
+        # if input_4_ch:
+        #     self.mask_parser = self.make_mask_parser()
         if use_imp:
             self.impmap_sigmoid = self.make_impmap()
             self.impmap_expand = ImpMapCuda(L = 16, n = n)
@@ -84,8 +89,14 @@ class ContentWeightedCNN_YOLO(BasicModule):
         # pdb.set_trace()
         if self.input_4_ch:
             mgdata = self.encoder(th.cat((x,o_m), 1))
+            # mgdata = self.encoder(x)
+            # parsed_mask = self.mask_parser(o_m)
+            # pdb.set_trace()
+            # mgdata = self.round(mgdata * parsed_mask)
+
         else:
             mgdata = self.encoder(x)
+            # mgdata = self.round(mgdata)
        
         # print('mgdata size',mgdata.shape)
         if self.use_imp:
@@ -119,33 +130,59 @@ class ContentWeightedCNN_YOLO(BasicModule):
         layers = [
             # 64 + 1 mask channel
             nn.Conv2d(self.n, 128, 3, 1, 1),
+            # nn.BatchNorm2d(128),
             nn.ReLU(inplace=False),
             nn.Conv2d(128, 1, 1, 1, 0),
+            # nn.BatchNorm2d(1),
             nn.Sigmoid()
         ]
         return nn.Sequential(*layers)
 
+    # def make_mask_parser(self):
+    #     layers = [
+    #         # nn.Conv2d(4 if self.input_4_ch else 3, 32, 8, 4, 2),
+    #         nn.Conv2d(1, 32, 8, 4, 2),
+    #         nn.BatchNorm2d(32),            
+    #         nn.ReLU(inplace=False), # 54   # 128 -> 32
+
+    #         nn.Conv2d(32, 64, 4, 2, 1), # 115  # 32 -> 16
+    #         nn.BatchNorm2d(64),
+    #         nn.ReLU(inplace=False),
+
+    #         nn.Conv2d(64, 64, 3, 1, 1), # 115  # 32 -> 16
+    #         nn.BatchNorm2d(64),
+    #         nn.ReLU(inplace=False),
+    #         nn.Conv2d(64, self.n, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
+    #         nn.BatchNorm2d(self.n),
+    #         nn.Sigmoid()     
+    #     ]
+    #     return nn.Sequential(*layers)              
 
 
     def make_encoder(self):
         layers = [
             # changed to 4
             nn.Conv2d(4 if self.input_4_ch else 3, 128, 8, 4, 2),
+            # nn.Conv2d(3, 128, 8, 4, 2), 
+            # nn.BatchNorm2d(128),          
             nn.ReLU(inplace=False), # 54   # 128 -> 32
 
             ResidualBlock(128, 128),
 
             nn.Conv2d(128, 256, 4, 2, 1), # 115  # 32 -> 16
+            # nn.BatchNorm2d(256),
             nn.ReLU(inplace=False),
 
             ResidualBlock(256, 256),
 
             nn.Conv2d(256, 256, 3, 1, 1), #192  # 16 -> 16
+            # nn.BatchNorm2d(256),
             nn.ReLU(inplace=False),
 
             ResidualBlock(256, 256),
 
             nn.Conv2d(256, self.n, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
+            # nn.BatchNorm2d(self.n),
             nn.Sigmoid(),                    
             # Round()                         # mgdata
             RoundCuda()
@@ -158,11 +195,13 @@ class ContentWeightedCNN_YOLO(BasicModule):
     def make_decoder(self):
         layers = [
             nn.Conv2d(self.n, 512, 3, 1, 1),
+            # nn.BatchNorm2d(512),
             nn.ReLU(inplace=False),
 
             ResidualBlock(512, 512),
 
             nn.Conv2d(512, 512, 3, 1, 1),
+            # nn.BatchNorm2d(512),
             nn.ReLU(inplace=False),
 
             ResidualBlock(512, 512),
@@ -170,6 +209,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
             nn.PixelShuffle(2),  # 128 x 32 x 32
 
             nn.Conv2d(128, 256, 3, 1, 1),
+            # nn.BatchNorm2d(256),
             nn.ReLU(inplace=False),
 
             ResidualBlock(256, 256),
@@ -177,6 +217,7 @@ class ContentWeightedCNN_YOLO(BasicModule):
             nn.PixelShuffle(4),  # 256 x 128 x 128
 
             nn.Conv2d(16, 32, 3, 1, 1),
+            # nn.BatchNorm2d(32),
             nn.ReLU(inplace=False),
             
             nn.Conv2d(32, 3, 1, 1, 0) # 3 x 128 x 128

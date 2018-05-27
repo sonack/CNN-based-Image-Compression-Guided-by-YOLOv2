@@ -1,0 +1,42 @@
+random_center_bbox_crop=True
+n=64
+无imp_map: 
+Val(320x320 patch): 
+wml(25): 5837
+Test(mylist)(large full img):
+wml(25): 32033.904
+
+pretrained model with imp_map r=0.2 gm=0.2
+Val:
+wml(25): 9768   0.167 rate display
+Test:
+wml(25): 54486  0.1573969 rate display
+
+no_imp_wml_w=25/50
+w=25:
+Val: wml(25): 5803 
+Test: wml(25): 30104.7070
+w=50:
+Val: wml(25): 5518
+Test: wml(25): 27250.3320
+w=250(+bn):
+
+可以看到随着w的增大, bbox里面的mse确实更prefer.
+
+
+
+wml=25, yrl2, with impmap 0.2 0.2
+Val: wml(25): 9130   0.2419019 rate display
+Test: 
+
+
+尝试普通的rate_loss + large weighted mse loss
+
+
+
+====
+
+
+目前:
+ 
+input=3ch, large wml(w=250), resume with Cmpr_yolo_no_imp_pretrain_wo_impmap_300_05-26_02:29:21.pth [exp=wml_w=500_no_imp_4ch_pn0.5, 其实w=250, 3ch]
