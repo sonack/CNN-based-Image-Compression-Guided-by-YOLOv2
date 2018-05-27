@@ -462,14 +462,15 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
         return mse_loss_meter.value()[0]
 
 # ''' used for just inference
-def test(model, dataloader):
+def test(model1, model2, dataloader):
     def weighted_mse_loss(input, target, weight):
         weight_clone = t.ones_like(weight)
         weight_clone[weight == opt.input_original_bbox_inner] = opt.mse_bbox_weight
         # return t.sum(weight_clone * (input - target) ** 2)
         return t.sum(weight_clone * (input - target) ** 2)
     
-    model.eval()
+    model1.eval()
+    model2.eval()    
     avg_loss = 0
     progress_bar = tqdm(enumerate(dataloader), total=len(dataloader))
 
@@ -487,7 +488,7 @@ def test(model, dataloader):
     psnr = lambda x,y: 10*math.log10(255. ** 2 / mse(x,y))
 
 
-    evaluate = True
+    evaluate = False
     mmse = 0
     mpsnr = 0
     mrate = 0
@@ -517,19 +518,31 @@ def test(model, dataloader):
             test_mask = test_mask.cuda(async=True)
             test_o_mask = test_o_mask.cuda(async=True)
             test_o_mask_as_weight = test_o_mask_as_weight.cuda(async=True)
+            o_mask = o_mask.cuda(async=True)
         
         # pdb.set_trace()
-        reconstructed0, imp_mask_sigmoid = model(test_data, test_mask, test_o_mask)
+        reconstructed0, imp_mask_sigmoid = model1(test_data, test_mask, test_o_mask)
+        reconstructed0 = (test_data.clone() + reconstructed0) / 2
+        reconstructed02, imp_mask_sigmoid2 = model2(test_data, test_mask, test_o_mask)
+        
         # clamp to [0.0,1.0]
         # print('min,max', reconstructed.min(), reconstructed.max())
-        reconstructed = t.clamp(reconstructed0, -1.0, 1.0)
+        reconstructed0 = t.clamp(reconstructed0, -1.0, 1.0)
+        reconstructed02 = t.clamp(reconstructed02, -1.0, 1.0)
+
         # print('after clamped, min,max', reconstructed.min(), reconstructed.max())
 
         # pdb.set_trace()
+
+        inner_mask = (o_mask == opt.input_original_bbox_inner).repeat(1,3,1,1)
+        # pdb.set_trace()
+        reconstructed02[inner_mask] = reconstructed0[inner_mask]
+        reconstructed = reconstructed02
+
         if opt.use_imp:
             # mrate += (imp_mask_sigmoid.data[0]*(1-mask)).sum() / ((mask == 0).sum())
-            mrate += imp_mask_sigmoid.data.mean()
-            imp_map = transforms.ToPILImage()(imp_mask_sigmoid.data.cpu()[0])
+            mrate += imp_mask_sigmoid2.data.mean()
+            imp_map = transforms.ToPILImage()(imp_mask_sigmoid2.data.cpu()[0])
             imp_map = imp_map.resize((imp_map.size[0]*8, imp_map.size[1]*8))
             if opt.save_test_img:
                 imp_map.save(os.path.join(opt.test_imgs_save_path, "%d_impMap.png" % idx))
@@ -540,6 +553,7 @@ def test(model, dataloader):
             img_origin.save(os.path.join(opt.test_imgs_save_path, "%d_origin.png" % idx))
 
         img_reconstructed = revert_transforms(reconstructed.data.cpu()[0])
+
         if opt.save_test_img:
             img_reconstructed.save(os.path.join(opt.test_imgs_save_path, "%d_reconst.png" % idx))
         if evaluate:
@@ -552,13 +566,13 @@ def test(model, dataloader):
     mmse /= len(progress_bar) * 1
     mpsnr /= len(progress_bar) * 1
     mrate /= len(progress_bar) * 1
-    
-    print ('avg mse = {mse}, avg psnr = {psnr}, avg rate = {rate}'.format(mse = mmse, psnr = mpsnr, rate = mrate))
+    if evaluate:
+        print ('avg mse = {mse}, avg psnr = {psnr}, avg rate = {rate}'.format(mse = mmse, psnr = mpsnr, rate = mrate))
 
-def run_test():
-    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = 64, input_4_ch=True)
+def run_test(test_img=None):
+    model1 = getattr(models, opt.model)(use_imp = False, n = 128, input_4_ch=False)
     if opt.use_gpu:
-        model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
+        model1.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     
 
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
@@ -572,10 +586,26 @@ def run_test():
 
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl2_wml=25/Cmpr_yolo_imp_yrl2_and_wml_r=0.2_gm=0.2_wml=25_r=0.2_gama=0.2_40_05-26_14:37:07.pth"
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/pretrained_w_imp_0.2/Cmpr_yolo_imp_pretrain_w_impmap_64_r=0.2_gm=0.2_cont_from_22_r=0.2_gama=0.2_94_05-26_18:11:40.pth"
-    test_ckpt = opt.resume
+    # test_ckpt = opt.resume
 
 
-    model.load(None, test_ckpt)
+
+    # test_ckpt = ""
+    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp_128_450.pth"
+
+    model1.load(None, test_ckpt)
+
+    model2 = getattr(models, opt.model)(use_imp = True, n = 64, input_4_ch=True)
+    if opt.use_gpu:
+        model2.cuda()
+    
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/w_imp_0.2_0,2_140.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/low_64.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_yrl2_and_wml_r=0.2_gm=0.2_r=0.2_gama=0.2_130_05-26_18:46:47.pth"
+    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_yrl2_and_wml_r=0.2_gm=0.2_wml=25_r=0.2_gama=0.2_87_05-26_19:10:29.pth"
+    model2.load(None, test_ckpt)
+
+
 
     test_transforms = transforms.Compose(
         [
@@ -586,9 +616,16 @@ def run_test():
     )
 
     run_test_data_list = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/my_test.txt"
+    if test_img:
+        print ('Compressing %s ... ' % test_img)
+        tmp_test_data_list = "/tmp/test_data_list.txt"
+        with open(tmp_test_data_list, 'w') as f:
+            f.write(test_img)
+        run_test_data_list = tmp_test_data_list
+    
     test_data = ImageCropWithBBoxMaskDataset(run_test_data_list, test_transforms, contrastive_degree=opt.contrastive_degree, mse_bbox_weight = opt.input_original_bbox_weight, train=False)
     test_dataloader = DataLoader(test_data, 1, shuffle = False)
-    test(model, test_dataloader)
+    test(model1, model2, test_dataloader)
 # '''
 
 
