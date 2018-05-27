@@ -120,7 +120,7 @@ class ImageCropWithBBoxMaskDataset(Dataset):
         self.transform = transform
         self.crop_size = crop_size
         self.R = contrastive_degree
-        self.mse_bbox_weight = mse_bbox_weight
+        # self.mse_bbox_weight = mse_bbox_weight
         self.train = train
 
     def __len__(self):
@@ -144,7 +144,7 @@ class ImageCropWithBBoxMaskDataset(Dataset):
             if h % 8:
                 h -= h % 8
             img = img.crop((0,0,w,h))
-        original_full_mask = th.ones((h,w))
+        original_full_mask = th.ones((h,w)) * opt.input_original_bbox_outer
         full_mask = th.ones((h//8, w//8))
         bs = np.array([])
         if os.path.getsize(label_path):
@@ -156,10 +156,11 @@ class ImageCropWithBBoxMaskDataset(Dataset):
         num_objs = bs.shape[0]
         if num_objs:
             fill_full_mask(full_mask, bs, self.R)
-            fill_full_mask(original_full_mask, bs, self.mse_bbox_weight)
+            fill_full_mask(original_full_mask, bs, opt.input_original_bbox_inner)
         if not self.train:
             if self.transform:
                 img = self.transform(img)
+            # full_mask unsqueeze?
             return (img, full_mask, original_full_mask.unsqueeze(0))
         
         if opt.dataset_enable_bbox_center_crop:

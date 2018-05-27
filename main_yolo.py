@@ -45,6 +45,7 @@ def multiple_gpu_process(model):
         model.cuda()
     return model
 
+
 def train(**kwargs):
     opt.parse(kwargs)
     # log file
@@ -86,13 +87,13 @@ def train(**kwargs):
         opt.train_data_list,
         train_data_transforms,
         contrastive_degree = opt.contrastive_degree,
-        mse_bbox_weight = opt.mse_bbox_weight
+        mse_bbox_weight = opt.input_original_bbox_weight
     )
     val_data = ImageCropWithBBoxMaskDataset(
         opt.val_data_list,
         val_data_transforms,
         contrastive_degree = opt.contrastive_degree,
-        mse_bbox_weight = opt.mse_bbox_weight
+        mse_bbox_weight = opt.input_original_bbox_weight
     )
     train_dataloader = DataLoader(train_data, opt.batch_size, shuffle=True, num_workers=opt.num_workers, pin_memory=True)
     val_dataloader = DataLoader(val_data, opt.batch_size, shuffle=False, num_workers=opt.num_workers, pin_memory=True)
@@ -112,7 +113,12 @@ def train(**kwargs):
         # weight[weight==opt.mse_bbox_weight] = opt.mse_bbox_weight
         # print('max val', weight.max())    
         # return mse_loss(input, target)
-        return t.sum(weight * (input - target) ** 2)
+        # weight_clone = weight.clone()
+        # weight_clone[weight_clone == opt.input_original_bbox_weight] = 0
+        # return t.sum(weight_clone * (input - target) ** 2)
+        weight_clone = t.ones_like(weight)
+        weight_clone[weight == opt.input_original_bbox_inner] = opt.mse_bbox_weight
+        return t.sum(weight_clone * (input - target) ** 2)
 
     
     def yolo_rate_loss(imp_map, mask_r):
@@ -427,7 +433,7 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
         val_data = Variable(data, volatile=True)
         val_mask = Variable(mask, volatile=True)
         val_o_mask = Variable(o_mask, volatile=True)
-
+        # pdb.set_trace()
         if opt.use_gpu:
             val_data = val_data.cuda(async=True)
             val_mask = val_mask.cuda(async=True)
@@ -458,7 +464,10 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
 # ''' used for just inference
 def test(model, dataloader):
     def weighted_mse_loss(input, target, weight):
-        return t.sum(weight * (input - target) ** 2)
+        weight_clone = t.ones_like(weight)
+        weight_clone[weight == opt.input_original_bbox_inner] = opt.mse_bbox_weight
+        # return t.sum(weight_clone * (input - target) ** 2)
+        return t.sum(weight_clone * (input - target) ** 2)
     
     model.eval()
     avg_loss = 0
@@ -499,7 +508,7 @@ def test(model, dataloader):
         # o_mask[bbox_outer] = opt.mse_bbox_weight
         # print (o_mask)
         # pdb.set_trace()
-        o_mask[...] = 1
+        # o_mask[...] = 1
         test_o_mask = Variable(o_mask, volatile=True)
         test_o_mask_as_weight = Variable(o_mask_as_weight, volatile=True)
         # pdb.set_trace()
@@ -547,18 +556,25 @@ def test(model, dataloader):
     print ('avg mse = {mse}, avg psnr = {psnr}, avg rate = {rate}'.format(mse = mmse, psnr = mpsnr, rate = mrate))
 
 def run_test():
-    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = 64, input_4_ch=False)
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = 64, input_4_ch=True)
     if opt.use_gpu:
         model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
     
 
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_method1_r=0.2_gama=0.1/05-25/Cmpr_yolo_imp_method1_r=0.2_gama=0.1_40_05-25_14:36:24.pth"
-    test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_180_05-25_21:34:37.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/no_imp/Cmpr_yolo_no_imp_pretrain_wo_impmap_180_05-25_21:34:37.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl2_nml/Cmpr_yolo_imp_yrl2_and_wml_r=0.2_gm=0.2_r=0.2_gama=0.2_12_05-26_11:44:37.pth"
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/imagenet/ContentWeightedCNN_ImageNet_42_03-24_14:45:27.pth"
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl_noimp_w=50/Cmpr_yolo_no_imp_yrl_and_wml_no_imp_weight=50_189_05-26_09:26:16.pth"
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/Cmpr_yolo_imp_yrl_and_wml_r=0.2_gama=0.15/05-26/Cmpr_yolo_imp_yrl_and_wml_r=0.2_gama=0.15_25_05-26_00:58:36.pth"
     
     # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl_noimp_w=25/Cmpr_yolo_no_imp_yrl_and_wml_no_imp_187_05-26_09:58:35.pth"
+
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/yrl2_wml=25/Cmpr_yolo_imp_yrl2_and_wml_r=0.2_gm=0.2_wml=25_r=0.2_gama=0.2_40_05-26_14:37:07.pth"
+    # test_ckpt = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/pretrained_w_imp_0.2/Cmpr_yolo_imp_pretrain_w_impmap_64_r=0.2_gm=0.2_cont_from_22_r=0.2_gama=0.2_94_05-26_18:11:40.pth"
+    test_ckpt = opt.resume
+
+
     model.load(None, test_ckpt)
 
     test_transforms = transforms.Compose(
@@ -570,7 +586,7 @@ def run_test():
     )
 
     run_test_data_list = "/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/my_test.txt"
-    test_data = ImageCropWithBBoxMaskDataset(run_test_data_list, test_transforms, contrastive_degree=opt.contrastive_degree, mse_bbox_weight = opt.mse_bbox_weight, train=False)
+    test_data = ImageCropWithBBoxMaskDataset(run_test_data_list, test_transforms, contrastive_degree=opt.contrastive_degree, mse_bbox_weight = opt.input_original_bbox_weight, train=False)
     test_dataloader = DataLoader(test_data, 1, shuffle = False)
     test(model, test_dataloader)
 # '''
