@@ -47,7 +47,7 @@ class DefaultConfig(object):
     use_gpu = True
     num_workers = 8
     max_epoch = 150*3
-    lr = 1e-6
+    lr = 1e-5
     lr_decay = 0.1
     lr_anneal_epochs = 150
     use_early_adjust = False
