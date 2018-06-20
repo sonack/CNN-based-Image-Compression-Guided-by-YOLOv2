@@ -1,1 +1,1 @@
-export PYTHONPATH=/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/extend:/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2:$PYTHONPATH
+export PYTHONPATH=/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2:$PYTHONPATH

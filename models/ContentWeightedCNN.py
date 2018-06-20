@@ -41,7 +41,7 @@ class ResidualBlock(nn.Module):
 
 def xavier_init(data):
     fan_in = data.numel() / data.size(0)
-    scale = math.sqrt(3.0 / fan_in)
+    scale = math.sqrt(3.0 / fan_in)  # (out_channels , in_channels , kernel_size)
     data.uniform_(-scale, scale)
 
 
@@ -230,14 +230,16 @@ class ContentWeightedCNN(BasicModule):
     '''
     Learning Convolutional Networks for Content-weighted Image Compression 
     '''
-    def __init__(self, use_imp = True, model_name = None):
+    def __init__(self, use_imp = True, n = 64, model_name = None):
         super(ContentWeightedCNN, self).__init__()
-        self.model_name = model_name if model_name else 'Context_without_imp'
+        self.model_name = model_name if model_name else 'CWCNN_default_name'
         self.use_imp = use_imp
+        self.n = n
+        self.shared_encoder = self.make_shared_encoder()
         self.encoder = self.make_encoder()
         if use_imp:
             self.impmap_sigmoid = self.make_impmap()
-            self.impmap_expand = ImpMapCuda(L = 16, n = 64)
+            self.impmap_expand = ImpMapCuda(L = 16, n = n)   # ImpMap 没有检查
         self.decoder = self.make_decoder()
         self.reset_parameters()
     
@@ -245,27 +247,30 @@ class ContentWeightedCNN(BasicModule):
         self.apply(weights_initialization)
     
 
-    #  I fixed sth. here!　2018年04月01日14:05:49
     def forward(self, x, need_decode = True):
-        mgdata = self.encoder(x)
-        # print('mgdata size',mgdata.shape)
+        last_residual_out = self.shared_encoder(x)
+        mgdata = self.encoder(last_residual_out)
         if self.use_imp:
-            self.imp_mask_sigmoid = self.impmap_sigmoid(mgdata)
+            self.imp_mask_sigmoid = self.impmap_sigmoid(last_residual_out)
             self.imp_mask, self.imp_mask_height = self.impmap_expand(self.imp_mask_sigmoid)
             enc_data = mgdata * self.imp_mask
         else:
             enc_data = mgdata
         if need_decode:
             dec_data = self.decoder(enc_data)
+
         # print ('dec_data size', dec_data.size())
-        # return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
-        return dec_data  # no_imp
+        
+        if self.use_imp:
+            return (dec_data, self.imp_mask_sigmoid) if need_decode else (enc_data, self.imp_mask_height)
+        else:
+            return dec_data  # no_imp
 
 
 
     def make_impmap(self):
         layers = [
-            nn.Conv2d(64, 128, 3, 1, 1),
+            nn.Conv2d(256, 128, 3, 1, 1),
             nn.ReLU(inplace=False),
             nn.Conv2d(128, 1, 1, 1, 0),
             nn.Sigmoid()
@@ -273,8 +278,7 @@ class ContentWeightedCNN(BasicModule):
         return nn.Sequential(*layers)
 
 
-
-    def make_encoder(self):
+    def make_shared_encoder(self):
         layers = [
             nn.Conv2d(3, 128, 8, 4, 2),
             nn.ReLU(inplace=False), # 54   # 128 -> 32
@@ -290,12 +294,17 @@ class ContentWeightedCNN(BasicModule):
             nn.ReLU(inplace=False),
 
             ResidualBlock(256, 256),
+        ]
+        return nn.Sequential(*layers)
 
-            nn.Conv2d(256, 64, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
+
+    def make_encoder(self):
+        layers = [
+            nn.Conv2d(256, self.n, 1, 1, 0),    # conv 4  64 is n  # 16 -> 16
             nn.Sigmoid(),                    
             # Round()                         # mgdata
-            # RoundCuda()
-            LimuRound(1-1e-10, 0.01)  # ratio, scale to fix grad
+            RoundCuda()
+            # LimuRound(1-(1e-10), 0.01)  # ratio, scale to fix grad
         ]
         return nn.Sequential(*layers)
 
@@ -303,7 +312,7 @@ class ContentWeightedCNN(BasicModule):
 
     def make_decoder(self):
         layers = [
-            nn.Conv2d(64, 512, 3, 1, 1),
+            nn.Conv2d(self.n, 512, 3, 1, 1),
             nn.ReLU(inplace=False),
 
             ResidualBlock(512, 512),
@@ -322,7 +331,7 @@ class ContentWeightedCNN(BasicModule):
 
             nn.PixelShuffle(4),  # 256 x 128 x 128
 
-            nn.Conv2d(16, 32, 3, 1, 1),
+            nn.Conv2d(16, 32, 3, 1, 1),  # 论文补充资料A table 2 给出的参数为depth2space(4)=128???
             nn.ReLU(inplace=False),
             
             nn.Conv2d(32, 3, 1, 1, 0) # 3 x 128 x 128
@@ -353,7 +362,7 @@ class ListModule(nn.Module):
 
     def __len__(self):
         return len(self._modules)
-      
+
 class ContentWeightedCNN_UNET(BasicModule):
     def __init__(self, use_unet = True, use_imp = False, model_name = None):
         super(ContentWeightedCNN_UNET, self).__init__()

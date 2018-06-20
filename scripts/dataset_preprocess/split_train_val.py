@@ -7,11 +7,17 @@ import pdb
 划分train和val set
 '''
 
-# 7481
-TRAINVAL_FILE_PATH = '/home/snk/WindowsDisk/Download/KITTI/trainval.txt'
-TRAIN_FILE_NAME = "/home/snk/WindowsDisk/Download/KITTI/train.txt"
-VAL_FILE_NAME = "/home/snk/WindowsDisk/Download/KITTI/val.txt"
-VAL_NUM = 481 # sample 481 val + 7000 train examples
+# 7481 train+val (其实就是KITTI的所有train)
+# TRAINVAL_FILE_PATH = '/home/snk/WindowsDisk/Download/KITTI/trainval.txt'
+TRAINVAL_FILE_PATH = '/home/snk/WindowsDisk/Download/KITTI/val.txt'
+
+# TRAIN_FILE_NAME = "/home/snk/WindowsDisk/Download/KITTI/train.txt"
+TRAIN_FILE_NAME = "/home/snk/WindowsDisk/Download/KITTI/test_subset.txt"
+
+VAL_FILE_NAME = "/home/snk/WindowsDisk/Download/KITTI/val_subset.txt"
+
+# VAL_NUM = 481  # sample 481 val + 7000 train examples
+VAL_NUM = 240 # sample 241 test + 240 val
 
 imgs = open(TRAINVAL_FILE_PATH, 'r').readlines()
 total_imgs = len(imgs)

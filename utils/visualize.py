@@ -109,6 +109,8 @@ class PlotSaver(object):
     
     def log(self, text, append = True):
         log_file = os.path.join(opt.log_path, self.log_name)
+        if not os.path.exists(log_file):
+            print ('Create log file %s!' % log_file)
         with open(log_file, "a" if append else "w") as f:
             rec = time.strftime('%m月%d日 %H:%M:%S : ') + text + '\n'
             f.write(rec)

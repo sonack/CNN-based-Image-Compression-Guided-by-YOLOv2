@@ -38,7 +38,7 @@ class BasicModule(t.nn.Module):
         如AlexNet_0710_23:57:29.pth
         '''
         if path is None:
-            # model save dir MODEL_NAME/DATE/checkpoints_file
+            # model save dir CHECKPOINTS_DIR/MODEL_NAME/DATE/checkpoints_file
             path = os.path.join(CHECKPOINTS_DIR, self.model_name, time.strftime('%m-%d'))
         if name is None:
             name = self.model_name + ("_%d" % epoch) + time.strftime('_%m-%d_%H:%M:%S.pth')
