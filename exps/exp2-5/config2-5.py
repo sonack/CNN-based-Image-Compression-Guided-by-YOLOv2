@@ -39,6 +39,7 @@ class DefaultConfig(object):
     init_val = True
 
     test_test = False # 用val的方式来test_test  use run_val
+                      # 暂时对HPC无效， 因为HPC还没有Kodak数据集，且eval不需要用到HPC
      
     # exp_desc = "pretrain_wo_impmap_128"
     # yolo rate loss and weighted mse loss
@@ -79,12 +80,12 @@ class DefaultConfig(object):
 
 # datasets
     local_ds_root = "/home/snk/WindowsDisk/Download/KITTI/cmpr_datasets/"
-    hpc_ds_root = "/share/Dataset/KITTI/"
+    hpc_ds_root = "/share/Dataset/KITTI/cmpr_datasets/"
     train_data_list = os.path.join(local_ds_root,"traintest.txt") if not GPU_HPC else os.path.join(hpc_ds_root, "traintest.txt")
     # val_data_list = os.path.join(local_ds_root,"val_subset.txt") if not GPU_HPC else os.path.join(hpc_ds_root, "val.txt")
     # test_data_list = os.path.join(local_ds_root,"test_subset.txt") if not GPU_HPC else os.path.join(hpc_ds_root,"test.txt") 
     test_data_list = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/caffe_model_cmp/ctifl.txt" # Kodak
-    val_data_list = (test_data_list if test_test else os.path.join(local_ds_root,"val_subset.txt")) if not GPU_HPC else os.path.join(hpc_ds_root, "val.txt") # 利用InitVal来测试Val集和Test集
+    val_data_list = (test_data_list if test_test else os.path.join(local_ds_root,"val_subset.txt")) if not GPU_HPC else os.path.join(hpc_ds_root, "val_subset.txt") # 利用InitVal来测试Val集和Test集
 
 # training
     batch_size = 32 # for train and val
@@ -104,11 +105,12 @@ class DefaultConfig(object):
     print_smooth = True
 
     plot_path = 'plot'
-    log_path = 'log' 
+    log_path = 'log'
 # debug
     debug_file = "debug/info"
 # finetune
-    resume = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp1/checkpoints/pretrain_wo_imp_no_imp/06-21/pretrain_wo_imp_no_imp_600_06-21_03:30:17.pth"
+    resume = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp1/checkpoints/pretrain_wo_imp_no_imp/06-21/pretrain_wo_imp_no_imp_600_06-21_03:30:17.pth" \
+                if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/exp1/pretrain_wo_imp_no_imp_600_06-21_03_30_17.pth"
 
     finetune = True  # continue training or finetune when given a resume file
 
@@ -130,15 +132,17 @@ class DefaultConfig(object):
                 print(k,":",getattr(self, k))
         print('-' * 30)
         print('Good Luck!')
+    
+    def make_new_dirs(self):
+        if not os.path.exists(self.plot_path):
+            print ('mkdir', self.plot_path)
+            os.makedirs(self.plot_path)
+
+        if not os.path.exists(self.log_path):
+            print ('mkdir', self.log_path)
+            os.makedirs(self.log_path)    
         
 opt = DefaultConfig()
-if not os.path.exists(opt.plot_path):
-    print ('mkdir', opt.plot_path)
-    os.makedirs(opt.plot_path)
-
-if not os.path.exists(opt.log_path):
-    print ('mkdir', opt.log_path)
-    os.makedirs(opt.log_path)
 
 if __name__ == '__main__':
     opt.parse()
