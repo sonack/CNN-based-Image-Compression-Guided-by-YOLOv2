@@ -1,1 +1,1 @@
-exps/config1.py
+exps/exp1/config1.py

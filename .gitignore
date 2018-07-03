@@ -3,4 +3,8 @@ datasets/*
 __pycache__/
 *.py[cod]
 logs/
+log/
 *.pth
+plot/
+data/
+ckpts/

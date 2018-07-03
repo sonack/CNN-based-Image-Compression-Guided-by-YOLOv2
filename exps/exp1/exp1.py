@@ -34,11 +34,25 @@ use_data_parallel = -1
 
 from libs import multiple_gpu_process
 
+def save_caffe_data(to_make_dataset):
+    if not os.path.exists(opt.caffe_data_save_dir):
+        os.makedirs(opt.caffe_data_save_dir)
+        print ('Mkdir %s!' % opt.caffe_data_save_dir)
+    for i in tqdm(range(len(to_make_dataset))):
+        to_make_dataset[i].save(os.path.join(opt.caffe_data_save_dir, '%d.png' % i))
 
 def train(**kwargs):
     opt.parse(kwargs)
     # log file
-    logfile_name = opt.exp_desc + time.strftime("_%m_%d_%H:%M:%S")+".log.txt"
+    EvalVal = opt.only_init_val and opt.init_val and not opt.test_test
+    EvalTest = opt.only_init_val and opt.init_val and opt.test_test
+    EvalSuffix = ""
+    if EvalVal:
+        EvalSuffix = "_val"
+    if EvalTest:
+        EvalSuffix = "_test"
+    logfile_name = opt.exp_desc + time.strftime("_%m_%d_%H:%M:%S") + EvalSuffix + ".log.txt"
+    
     ps = PlotSaver(logfile_name)
 
 
@@ -51,6 +65,8 @@ def train(**kwargs):
     if opt.use_gpu:
         model, use_data_parallel = multiple_gpu_process(model)
     
+    # real use gpu or cpu
+    opt.use_gpu = opt.use_gpu and use_data_parallel >= 0
     cudnn.benchmark = True
 
     # step2: Data
@@ -75,6 +91,12 @@ def train(**kwargs):
             normalize
         ]
     )
+
+    caffe_data_transforms = transforms.Compose(
+        [
+            transforms.CenterCrop(128)
+        ]
+    )
     
     train_data = ImageFilelist(
         flist = opt.train_data_list,
@@ -85,6 +107,22 @@ def train(**kwargs):
         flist = opt.val_data_list,
         transform = val_data_transforms,
     )
+
+    val_data_caffe = ImageFilelist(
+        flist = opt.val_data_list,
+        transform = caffe_data_transforms
+    )
+    
+    test_data_caffe = ImageFilelist(
+        flist = opt.test_data_list,
+        transform = caffe_data_transforms
+    )
+
+    if opt.make_caffe_data:
+        save_caffe_data(test_data_caffe)
+        print ('Make caffe dataset over!')
+        return
+    
     # train_data = ImageCropWithBBoxMaskDataset(
     #     opt.train_data_list,
     #     train_data_transforms,
@@ -128,12 +166,14 @@ def train(**kwargs):
         # V2 contrastive_degree must be 0! 
         # return YoloRateLossV2(mask_r, opt.rate_loss_threshold, opt.rate_loss_weight)(imp_map)
     
-    
-    lr = opt.lr
-    optimizer = t.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
-
     start_epoch = 0
     decay_file_create_time = -1 # 为了避免同一个文件反复衰减学习率, 所以判断修改时间
+
+    previous_loss = 1e100
+    tolerant_now = 0
+    same_lr_epoch = 0
+    lr = opt.lr
+    optimizer = t.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
 
     if opt.resume:
         start_epoch = (model.module if use_data_parallel==1 else model).load(None if opt.finetune else optimizer, opt.resume, opt.finetune)
@@ -142,8 +182,18 @@ def train(**kwargs):
             print ('Finetune from model checkpoint file', opt.resume)
         else:
             print ('Resume training from checkpoint file', opt.resume)
-            print ('Continue training at epoch %d.' %  start_epoch)
+            print ('Continue training from epoch %d.' %  start_epoch)
+            same_lr_epoch = start_epoch % opt.lr_anneal_epochs
+            decay_times = start_epoch // opt.lr_anneal_epochs
+            lr = opt.lr * (opt.lr_decay ** decay_times)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+            print ('Decay lr %d times, now lr is %e.' % (decay_times, lr))
+            
     
+   
+    
+
     # step4: meters
     mse_loss_meter = AverageValueMeter()
     if opt.use_imp:
@@ -152,9 +202,7 @@ def train(**kwargs):
         total_loss_meter = AverageValueMeter()
 
 
-    previous_loss = 1e100
-    tolerant_now = 0
-    same_lr_epoch = 0
+    
     
 
     # ps init
@@ -170,7 +218,10 @@ def train(**kwargs):
         ps.new_plot('val total loss', 1, xlabel="iteration", ylabel="val_total_loss")
    
 
-
+    # 如果测试时是600，max_epoch也是600
+    if opt.only_init_val and opt.max_epoch <= start_epoch:
+        opt.max_epoch = start_epoch + 2
+    
     for epoch in range(start_epoch+1, opt.max_epoch+1):
 
         same_lr_epoch += 1
@@ -268,9 +319,8 @@ def train(**kwargs):
             caffe_loss = loss / (2 * opt.batch_size)
             
             if opt.use_imp:
-                rate_loss_display = imp_mask_sigmoid
-                rate_loss_ =  rate_loss(rate_loss_display)
-                # rate_loss_ = yolo_rate_loss(rate_loss_display, mask)
+                rate_loss_ =  rate_loss(imp_mask_sigmoid)
+                # rate_loss_ = yolo_rate_loss(imp_mask_sigmoid, mask)
                 total_loss = caffe_loss + rate_loss_
             else:
                 total_loss = caffe_loss
@@ -282,7 +332,7 @@ def train(**kwargs):
 
             if opt.use_imp:
                 rate_loss_meter.add(rate_loss_.data[0])
-                rate_display_meter.add(rate_loss_display.data.mean())
+                rate_display_meter.add(imp_mask_sigmoid.data.mean())
                 total_loss_meter.add(total_loss.data[0])
 
 
@@ -290,7 +340,7 @@ def train(**kwargs):
                 ps.add_point('train mse loss', mse_loss_meter.value()[0] if opt.print_smooth else caffe_loss.data[0])
                 ps.add_point('cur epoch train mse loss', mse_loss_meter.value()[0] if opt.print_smooth else caffe_loss.data[0])
                 if opt.use_imp:
-                    ps.add_point('train rate value', rate_display_meter.value()[0] if opt.print_smooth else rate_loss_display.data.mean())
+                    ps.add_point('train rate value', rate_display_meter.value()[0] if opt.print_smooth else imp_mask_sigmoid.data.mean())
                     ps.add_point('train rate loss', rate_loss_meter.value()[0] if opt.print_smooth else rate_loss_.data[0])
                     ps.add_point('train total loss', total_loss_meter.value()[0] if opt.print_smooth else total_loss.data[0])
             
@@ -430,10 +480,11 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
         rate_display_meter.reset()
         rate_loss_meter.reset()
         total_loss_meter.reset()
-
+    
     for idx, data in enumerate(dataloader):
         # ps.log('%.0f%%' % (idx*100.0/len(dataloader)))
-        val_data = Variable(data, volatile=True)
+        # pdb.set_trace()  # 32*7+16 = 240
+        val_data = Variable(data, volatile=True)        
         # val_mask = Variable(mask, volatile=True)
         # val_o_mask = Variable(o_mask, volatile=True)
         # pdb.set_trace()
@@ -456,15 +507,14 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
         batch_caffe_loss = batch_loss / (2 * opt.batch_size)
 
         if opt.use_imp and rate_loss:
-            rate_loss_display = imp_mask_sigmoid
-            rate_loss_value =  rate_loss(rate_loss_display, val_mask)
+            rate_loss_value =  rate_loss(imp_mask_sigmoid, val_mask)
             total_loss = batch_caffe_loss + rate_loss_value
     
         mse_loss_meter.add(batch_caffe_loss.data[0])
 
         if opt.use_imp:
             rate_loss_meter.add(rate_loss_value.data[0])
-            rate_display_meter.add(rate_loss_display.data.mean())
+            rate_display_meter.add(imp_mask_sigmoid.data.mean())
             total_loss_meter.add(total_loss.data[0])
 
     if opt.use_imp:
@@ -473,19 +523,18 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
         return mse_loss_meter.value()[0]
 
 # ''' used for just inference
-def test(model, dataloader, mse_loss, rate_loss):
+def test(model, dataloader, test_batch_size, mse_loss, rate_loss):
+   
     model.eval()
-
-    avg_loss = 0
     progress_bar = tqdm(enumerate(dataloader), total=len(dataloader))
 
 
     if opt.save_test_img:
         if not os.path.exists(opt.test_imgs_save_path):
             os.makedirs(opt.test_imgs_save_path)
-            print ('Makedir %s!' % opt.test_imgs_save_path)
+            print ('Makedir %s for save test images!' % opt.test_imgs_save_path)
     
-    eval = True # mse_loss, rate_loss, rate_disp
+    eval_loss = True # mse_loss, rate_loss, rate_disp
     eval_on_RGB = False # RGB_mse, RGB_psnr
 
     revert_transforms = transforms.Compose([
@@ -495,7 +544,7 @@ def test(model, dataloader, mse_loss, rate_loss):
         transforms.ToPILImage()
     ])
 
-    mse = lambda x,y: (np.sum(np.square(y - x))) / float(x.size)
+    mse = lambda x,y: np.mean(np.square(y - x))
     psnr = lambda x,y: 10*math.log10(255. ** 2 / mse(x,y))
 
 
@@ -542,10 +591,11 @@ def test(model, dataloader, mse_loss, rate_loss):
         
         # pdb.set_trace()
         if opt.use_imp:
-            reconstructed = model(test_data)
-        else:
             reconstructed, imp_mask_sigmoid = model(test_data)
-
+        else:
+            reconstructed = model(test_data)
+            
+        # only save the 1th image of batch 
         img_origin = revert_transforms(test_data.data.cpu()[0])
         img_reconstructed = revert_transforms(reconstructed.data.cpu()[0])
 
@@ -554,12 +604,15 @@ def test(model, dataloader, mse_loss, rate_loss):
                 imp_map = transforms.ToPILImage()(imp_mask_sigmoid.data.cpu()[0])
                 imp_map = imp_map.resize((imp_map.size[0]*8, imp_map.size[1]*8))
                 imp_map.save(os.path.join(opt.test_imgs_save_path, "%d_imp.png" % idx))
-        img_origin.save(os.path.join(opt.test_imgs_save_path, "%d_origin.png" % idx))
-        img_reconstructed.save(os.path.join(opt.test_imgs_save_path, "%d_reconst.png" % idx))
+            img_origin.save(os.path.join(opt.test_imgs_save_path, "%d_origin.png" % idx))
+            img_reconstructed.save(os.path.join(opt.test_imgs_save_path, "%d_reconst.png" % idx))
 
-        if eval:
+        if eval_loss:
             mse_loss_v = mse_loss(reconstructed, test_data)
-            caffe_loss_v = mse_loss_v / (2 * opt.batch_size)
+
+            caffe_loss_v = mse_loss_v / (2 * test_batch_size)
+    
+            
             caffe_loss_meter.add(caffe_loss_v.data[0])
             if opt.use_imp:
                 rate_disp_meter.add(imp_mask_sigmoid.data.mean())
@@ -579,7 +632,7 @@ def test(model, dataloader, mse_loss, rate_loss):
             mse_meter.add(RGB_mse_v)
             psnr_meter.add(RGB_psnr_v)
 
-    if eval:
+    if eval_loss:
         print ('avg_mse_loss = {m_l}, avg_rate_loss = {r_l}, avg_rate_disp = {r_d}, avg_tot_loss = {t_l}'.format(
             m_l = caffe_loss_meter.value()[0],
             r_l = rate_loss_meter.value()[0],
@@ -590,7 +643,7 @@ def test(model, dataloader, mse_loss, rate_loss):
         print ('RGB avg mse = {mse}, RGB avg psnr = {psnr}'.format(mse = mse_meter.value()[0], psnr = psnr_meter.value()[0]))
 
 def run_test():
-    model = getattr(models, opt.model)(use_imp = False, n = 64)
+    model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num)
     if opt.use_gpu:
         # model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
         model, use_data_parallel = multiple_gpu_process(model)
@@ -600,7 +653,8 @@ def run_test():
                 std=[0.5, 0.5, 0.5]
     )
 
-    test_data_transforms = transforms.Compose(
+    test_batch_size = 1
+    test_data_transforms_crops = transforms.Compose(
         [
             transforms.CenterCrop(128),  # center crop 128x128
             transforms.ToTensor(),
@@ -609,14 +663,25 @@ def run_test():
         ]
     )
 
-    test_ckpt = ""
+    test_data_transforms_full = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            normalize
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ]
+    )
+
+    # test_data_transforms = test_data_transforms_full if test_batch_size == 1 else test_data_transforms_crops
+    test_data_transforms = test_data_transforms_crops
+
+    test_ckpt = opt.resume
 
     load_epoch = (model.module if use_data_parallel == 1 else model).load(None, test_ckpt)
     print ('Load epoch %d for test!' % load_epoch)
 
     
     test_data = ImageFilelist(flist=opt.test_data_list, transform = test_data_transforms)
-    test_dataloader = DataLoader(test_data, opt.batch_size, shuffle = False)
+    test_dataloader = DataLoader(test_data, test_batch_size, shuffle = False)
     
     mse_loss = t.nn.MSELoss(size_average = False)
     if opt.use_imp:
@@ -625,7 +690,7 @@ def run_test():
         rate_loss = None
 
     
-    test(model, test_dataloader, mse_loss, rate_loss)
+    test(model, test_dataloader, test_batch_size, mse_loss, rate_loss)
 # '''
 
 
