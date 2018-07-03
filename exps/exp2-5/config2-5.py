@@ -128,7 +128,7 @@ class DefaultConfig(object):
         print('User Config:\n')
         print('-' * 30)
         for k,v in self.__class__.__dict__.items():
-            if not k.startswith('__') and k != 'parse':
+            if not k.startswith('__') and k != 'parse' and k != 'make_new_dirs':
                 print(k,":",getattr(self, k))
         print('-' * 30)
         print('Good Luck!')

@@ -129,15 +129,15 @@ def train(**kwargs):
         transform = val_data_transforms,
     )
 
-    val_data_caffe = ImageFilelist(
-        flist = opt.val_data_list,
-        transform = caffe_data_transforms
-    )
+    # val_data_caffe = ImageFilelist(
+    #     flist = opt.val_data_list,
+    #     transform = caffe_data_transforms
+    # )
     
-    test_data_caffe = ImageFilelist(
-        flist = opt.test_data_list,
-        transform = caffe_data_transforms
-    )
+    # test_data_caffe = ImageFilelist(
+    #     flist = opt.test_data_list,
+    #     transform = caffe_data_transforms
+    # )
 
     if opt.make_caffe_data:
         save_caffe_data(test_data_caffe)
@@ -518,7 +518,7 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
             # val_o_mask = val_o_mask.cuda(async=True)
 
         # reconstructed, imp_mask_sigmoid = model(val_data, val_mask, val_o_mask)
-        if model.use_imp:
+        if opt.use_imp:
             reconstructed, imp_mask_sigmoid = model(val_data)
         else:
             reconstructed = model(val_data)

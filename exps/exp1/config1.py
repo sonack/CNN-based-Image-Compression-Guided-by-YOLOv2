@@ -25,7 +25,7 @@ class DefaultConfig(object):
     ]
         
     # 批处理
-    use_batch_process = True
+    use_batch_process = False
     r_s = [0.19, 0.26, 0.43, 0.66]
     exp_ids = [2,3,4,5]
     ####################
@@ -126,19 +126,21 @@ class DefaultConfig(object):
         print('User Config:\n')
         print('-' * 30)
         for k,v in self.__class__.__dict__.items():
-            if not k.startswith('__') and k != 'parse':
+            if not k.startswith('__') and k != 'parse' and k != "make_new_dirs":
                 print(k,":",getattr(self, k))
         print('-' * 30)
         print('Good Luck!')
+
+    def make_new_dirs(self):
+        if not os.path.exists(self.plot_path):
+            print ('mkdir', self.plot_path)
+            os.makedirs(self.plot_path)
+
+        if not os.path.exists(self.log_path):
+            print ('mkdir', self.log_path)
+            os.makedirs(self.log_path)   
         
 opt = DefaultConfig()
-if not os.path.exists(opt.plot_path):
-    print ('mkdir', opt.plot_path)
-    os.makedirs(opt.plot_path)
-
-if not os.path.exists(opt.log_path):
-    print ('mkdir', opt.log_path)
-    os.makedirs(opt.log_path)
 
 if __name__ == '__main__':
     opt.parse()

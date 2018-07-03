@@ -55,8 +55,9 @@ def train(**kwargs):
             opt.r = opt.r_s[batch_model_id]
             opt.exp_id = opt.exp_ids[batch_model_id]
             opt.exp_desc = opt.exp_desc_LUT[opt.exp_id]
+            opt.plot_path = "plot/plot_%d" % opt.exp_id
             print ('Cur Model(exp_%d) r = %f, desc = %s. ' % (opt.exp_id, opt.r, opt.exp_desc))
-    
+    opt.make_new_dirs()
     # log file
     EvalVal = opt.only_init_val and opt.init_val and not opt.test_test
     EvalTest = opt.only_init_val and opt.init_val and opt.test_test
@@ -515,7 +516,7 @@ def val(model, dataloader, mse_loss, rate_loss, ps):
             # val_o_mask = val_o_mask.cuda(async=True)
 
         # reconstructed, imp_mask_sigmoid = model(val_data, val_mask, val_o_mask)
-        if model.use_imp:
+        if opt.use_imp:
             reconstructed, imp_mask_sigmoid = model(val_data)
         else:
             reconstructed = model(val_data)
