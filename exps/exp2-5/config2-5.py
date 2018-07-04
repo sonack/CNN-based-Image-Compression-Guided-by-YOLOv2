@@ -26,8 +26,11 @@ class DefaultConfig(object):
         
     # 批处理
     use_batch_process = True
-    r_s = [0.19, 0.26, 0.43, 0.66]
-    exp_ids = [2,3,4,5]
+    # r_s = [0.19, 0.26, 0.43, 0.66]
+    r_s = [0.26, 0.43, 0.66]
+    # exp_ids = [2,3,4,5]
+    exp_ids = [3,4,5]
+    max_epochs = [1,1,1]
     ####################
 
     make_caffe_data = False
@@ -125,14 +128,18 @@ class DefaultConfig(object):
                 print ("Warning: opt has not attribute %s" % k)
             setattr(self, k, v)
         
+        print ('\n')
+        print ('*' * 30)
         print('User Config:\n')
-        print('-' * 30)
+        # print('-' * 30)
         for k,v in self.__class__.__dict__.items():
             if not k.startswith('__') and k != 'parse' and k != 'make_new_dirs':
                 print(k,":",getattr(self, k))
-        print('-' * 30)
+
         print('Good Luck!')
+
     
+
     def make_new_dirs(self):
         if not os.path.exists(self.plot_path):
             print ('mkdir', self.plot_path)

@@ -52,14 +52,16 @@ def train(**kwargs):
             return
         else:
             print ('Cur Batch Processing ID is %d/%d.' % (batch_model_id+1, max_bp_times))
-            opt.r = opt.r_s[batch_model_id]
             opt.exp_id = opt.exp_ids[batch_model_id]
+            opt.rate_loss_threshold = opt.r_s[batch_model_id]
+            opt.max_epoch = opt.max_epochs[batch_model_id]
             opt.exp_desc = opt.exp_desc_LUT[opt.exp_id]
             opt.plot_path = "plot/plot_%d" % opt.exp_id
-            print ('Cur Model(exp_%d) r = %f, desc = %s. ' % (opt.exp_id, opt.r, opt.exp_desc))
+            
+            print ('Cur Model(exp_%d) r = %f, desc = %s. ' % (opt.exp_id, opt.rate_loss_threshold, opt.exp_desc))
     
     opt.make_new_dirs()
-
+    print ('shit'
     # log file
     EvalVal = opt.only_init_val and opt.init_val and not opt.test_test
     EvalTest = opt.only_init_val and opt.init_val and opt.test_test
@@ -479,8 +481,9 @@ def train(**kwargs):
         
         previous_loss = total_loss_meter.value()[0]
     if opt.use_batch_process:
+        # pdb.set_trace()
         batch_model_id += 1
-        train(kwargs)
+        train(**kwargs)
 
 # TenCrop + Lambda
 # ValueError: Expected 4D tensor as input, got 5D tensor instead.

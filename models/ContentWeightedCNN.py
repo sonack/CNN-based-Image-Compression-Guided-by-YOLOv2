@@ -6,7 +6,6 @@ from torch.nn import functional as F
 import sys
 import math
 
-# sys.path.append("/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/")
 from extend import RoundCuda, ImpMapCuda, LimuRound, Round
 
 from torch.nn.init import xavier_uniform
