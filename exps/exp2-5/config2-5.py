@@ -129,7 +129,7 @@ class DefaultConfig(object):
 
     # lr decay controlled by file created
     use_file_decay_lr = True
-    lr_decay_file = "signal/lr_decay_" + exp_id # 不适用batch process
+    lr_decay_file = "signal/lr_decay_%d" % exp_id # 不适用batch process
 
     # auto early adjust lr
     use_early_adjust = False
