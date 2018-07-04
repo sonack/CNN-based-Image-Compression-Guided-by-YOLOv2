@@ -6,15 +6,22 @@ import os
 
 # ----------------------------------------------
 # exp_id = 1,   pretrain_wo_imp
-# LUT = Lookup Table
+# exp_id = 2,   'train_w_imp_gamma=0.2_r=0.19',
+# exp_id = 3,   'train_w_imp_gamma=0.2_r=0.26',
+# exp_id = 4,   'train_w_imp_gamma=0.2_r=0.43',
+# exp_id = 5,   'train_w_imp_gamma=0.2_r=0.66'
+# ----------------------------------------------
+
 
 
 
 
 
 class DefaultConfig(object):
+# judge environment according username
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
 
+# exp_description lookup table
     exp_desc_LUT = [
                 '',
                 'pretrain_wo_imp',
@@ -24,23 +31,26 @@ class DefaultConfig(object):
                 'train_w_imp_gamma=0.2_r=0.66'
     ]
         
-    # 批处理
+# 批处理
     use_batch_process = True
-    # r_s = [0.19, 0.26, 0.43, 0.66]
-    r_s = [0.26, 0.43, 0.66]
-    # exp_ids = [2,3,4,5]
-    exp_ids = [3,4,5]
-    max_epochs = [1,1,1]
+    # rate_loss_threshold
+    r_s = [0.19, 0.26, 0.43, 0.66]
+    # r_s = [0.26, 0.43, 0.66]
+
+    exp_ids = [2,3,4,5]
+    # exp_ids = [3,4,5]
+
+    max_epochs = [200*3] * 4
     ####################
 
+
+# make caffe dataset(imgs) to cmpr with caffe model
     make_caffe_data = False
     caffe_data_save_dir = "test_imgs_caffe"
 
-
-    input_4_ch = False
-    only_init_val = False # not train, only eval
+# Init val for val_subset or test_subset
     init_val = True
-
+    only_init_val = False # not train, only eval
     test_test = False # 用val的方式来test_test  use run_val
                       # 暂时对HPC无效， 因为HPC还没有Kodak数据集，且eval不需要用到HPC
      
@@ -53,64 +63,94 @@ class DefaultConfig(object):
     
     exp_id = 1
     exp_desc = exp_desc_LUT[exp_id]
-    # resume = ""
-    # exp_desc = "yrl_noimp_w=50"
 
 
+# KITTI model options
+    input_4_ch = False
+# KITTI detection crop options
     dataset_enable_bbox_center_crop = False
-# lr decay controlled by file created
-    use_file_decay_lr = True
-    lr_decay_file = "signal/lr_decay_" + exp_desc
+
 
 # model
     model = "ContentWeightedCNN"
     use_imp = True
     feat_num = 64  # defaut is 64
 
-    # contrastive_degree = 0  # yrlv2 required
+    # contrastive_degree = 0  # yrlv2 requires
+    # 4-ch input requires
     input_original_bbox_inner = 25
     input_original_bbox_outer = 1
 
+    # weighted mse
     mse_bbox_weight = 5
+
+    # rate loss
     rate_loss_weight = 0.2
     rate_loss_threshold = 0.12      # 0.12 | 0.17 | 0.32 | 0.49 |
 
 
 # save path
     # test_imgs_save_path = ("/home/snk/Desktop/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_" if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/logs/test_imgs_") + exp_desc
-    test_imgs_save_path = "test_imgs_saved/"
     save_test_img = False
+    test_imgs_save_path = "test_imgs_saved/"
+    
 
 # datasets
+    # local and HPC dataset root
     local_ds_root = "/home/snk/WindowsDisk/Download/KITTI/cmpr_datasets/"
     hpc_ds_root = "/share/Dataset/KITTI/cmpr_datasets/"
+
+    # train, val and test data filelist
     train_data_list = os.path.join(local_ds_root,"traintest.txt") if not GPU_HPC else os.path.join(hpc_ds_root, "traintest.txt")
     # val_data_list = os.path.join(local_ds_root,"val_subset.txt") if not GPU_HPC else os.path.join(hpc_ds_root, "val.txt")
+    
+    # KITTI test
     # test_data_list = os.path.join(local_ds_root,"test_subset.txt") if not GPU_HPC else os.path.join(hpc_ds_root,"test.txt") 
-    test_data_list = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/caffe_model_cmp/ctifl.txt" # Kodak
+    
+    # Kodak test
+    test_data_list = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/caffe_model_cmp/ctifl.txt" 
+    
     val_data_list = (test_data_list if test_test else os.path.join(local_ds_root,"val_subset.txt")) if not GPU_HPC else os.path.join(hpc_ds_root, "val_subset.txt") # 利用InitVal来测试Val集和Test集
 
 # training
-    batch_size = 32 # for train and val
+
+    # base
     use_gpu = True
     num_workers = 8
+
+    # basic
+    batch_size = 32 # for train and val
     max_epoch = 200*3
+
+    # lr
     lr = 1e-4
     lr_decay = 0.1
     lr_anneal_epochs = 200
+
+    # lr decay controlled by file created
+    use_file_decay_lr = True
+    lr_decay_file = "signal/lr_decay_" + exp_id # 不适用batch process
+
+    # auto early adjust lr
     use_early_adjust = False
     tolerant_max = 3
+
+    # regularization
     weight_decay = 0
+
 # display
     print_freq = 1 # by iteration
-    eval_interval = 1 # by epoch
-    save_interval = 10 # by epoch
     print_smooth = True
-
     plot_path = 'plot'
     log_path = 'log'
+
+    # interval
+    eval_interval = 1 # by epoch
+    save_interval = 10 # by epoch
+   
 # debug
     debug_file = "debug/info"
+
 # finetune
     resume = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp1/checkpoints/pretrain_wo_imp_no_imp/06-21/pretrain_wo_imp_no_imp_600_06-21_03:30:17.pth" \
                 if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/exp1/pretrain_wo_imp_no_imp_600_06-21_03_30_17.pth"
