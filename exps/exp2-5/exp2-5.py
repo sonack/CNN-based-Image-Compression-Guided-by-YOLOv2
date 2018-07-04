@@ -61,7 +61,6 @@ def train(**kwargs):
             print ('Cur Model(exp_%d) r = %f, desc = %s. ' % (opt.exp_id, opt.rate_loss_threshold, opt.exp_desc))
     
     opt.make_new_dirs()
-    print ('shit'
     # log file
     EvalVal = opt.only_init_val and opt.init_val and not opt.test_test
     EvalTest = opt.only_init_val and opt.init_val and opt.test_test
