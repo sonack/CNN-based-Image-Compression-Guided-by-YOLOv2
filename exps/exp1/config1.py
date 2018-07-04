@@ -60,7 +60,7 @@ class DefaultConfig(object):
 
 # model
     model = "ContentWeightedCNN"
-    use_imp = True
+    use_imp = False
     feat_num = 64  # defaut is 64
 
     # contrastive_degree = 0  # yrlv2 required
@@ -87,7 +87,7 @@ class DefaultConfig(object):
     val_data_list = (test_data_list if test_test else os.path.join(local_ds_root,"val_subset.txt")) if not GPU_HPC else os.path.join(hpc_ds_root, "val.txt") # 利用InitVal来测试Val集和Test集
 
 # training
-    batch_size = 32 # for train and val
+    batch_size = 1 # for train and val
     use_gpu = True
     num_workers = 8
     max_epoch = 200*3
@@ -98,6 +98,7 @@ class DefaultConfig(object):
     tolerant_max = 3
     weight_decay = 0
 # display
+    log_to_stdout = True
     print_freq = 1 # by iteration
     eval_interval = 1 # by epoch
     save_interval = 10 # by epoch

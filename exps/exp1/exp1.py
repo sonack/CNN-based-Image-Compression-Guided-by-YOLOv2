@@ -68,7 +68,7 @@ def train(**kwargs):
         EvalSuffix = "_test"
     logfile_name = opt.exp_desc + time.strftime("_%m_%d_%H:%M:%S") + EvalSuffix + ".log.txt"
     
-    ps = PlotSaver(logfile_name)
+    ps = PlotSaver(logfile_name, log_to_stdout = opt.log_to_stdout)
 
 
     # step1: Model
@@ -81,6 +81,7 @@ def train(**kwargs):
     
     model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num, model_name=opt.exp_desc)
     # pdb.set_trace()
+    global use_data_parallel
     if opt.use_gpu:
         model, use_data_parallel = multiple_gpu_process(model)
     
@@ -666,6 +667,7 @@ def test(model, dataloader, test_batch_size, mse_loss, rate_loss):
 
 def run_test():
     model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num)
+    global use_data_parallel
     if opt.use_gpu:
         # model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
         model, use_data_parallel = multiple_gpu_process(model)

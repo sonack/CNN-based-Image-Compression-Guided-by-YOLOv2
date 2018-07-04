@@ -83,13 +83,14 @@ class PlotSaver(object):
     '''
         Visualizer的退化版, 为了在不能使用visdom的GPU HPC上记录log和绘图
     '''
-    def __init__(self, log_name):
+    def __init__(self, log_name, log_to_stdout = False):
         self.log_name = log_name
         self.index = {}
         self.steps = {}
         self.x_labels = {}
         self.y_labels = {}
         self.log_text = ''
+        self.log_to_stdout = log_to_stdout
     
     def new_plot(self, title_key, step, xlabel, ylabel):
         if title_key in self.index:
@@ -109,11 +110,14 @@ class PlotSaver(object):
     
     def log(self, text, append = True):
         log_file = os.path.join(opt.log_path, self.log_name)
-        if not os.path.exists(log_file):
-            print ('Create log file %s!' % log_file)
-        with open(log_file, "a" if append else "w") as f:
-            rec = time.strftime('%m月%d日 %H:%M:%S : ') + text + '\n'
-            f.write(rec)
+        rec = time.strftime('%m月%d日 %H:%M:%S : ') + text + '\n'
+        if self.log_to_stdout:
+            print (rec, end="")
+        else:
+            if not os.path.exists(log_file):
+                print ('Create log file %s!' % log_file)
+            with open(log_file, "a" if append else "w") as f:
+                f.write(rec)
 
     def make_plot(self, title_key, epoch="*"):
         assert title_key in self.index, "You must new this plot before making plot to it!"         
