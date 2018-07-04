@@ -11,7 +11,7 @@ import os
 
 
 
-
+print ('import config1.py!')
 class DefaultConfig(object):
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
 
@@ -35,7 +35,7 @@ class DefaultConfig(object):
 
 
     input_4_ch = False
-    only_init_val = False # not train, only eval
+    only_init_val = True # not train, only eval
     init_val = True
 
     test_test = False # 用val的方式来test_test  use run_val
