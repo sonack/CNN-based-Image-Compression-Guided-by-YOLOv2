@@ -3,7 +3,7 @@ from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
 
-exp_id = 1
+exp_id = "2~5"
 
 from config import opt
 import os
@@ -52,11 +52,14 @@ def train(**kwargs):
             return
         else:
             print ('Cur Batch Processing ID is %d/%d.' % (batch_model_id+1, max_bp_times))
-            opt.r = opt.r_s[batch_model_id]
             opt.exp_id = opt.exp_ids[batch_model_id]
+            opt.rate_loss_threshold = opt.r_s[batch_model_id]
+            opt.max_epoch = opt.max_epochs[batch_model_id]
             opt.exp_desc = opt.exp_desc_LUT[opt.exp_id]
             opt.plot_path = "plot/plot_%d" % opt.exp_id
-            print ('Cur Model(exp_%d) r = %f, desc = %s. ' % (opt.exp_id, opt.r, opt.exp_desc))
+            
+            print ('Cur Model(exp_%d) r = %f, desc = %s. ' % (opt.exp_id, opt.rate_loss_threshold, opt.exp_desc))
+    
     opt.make_new_dirs()
     # log file
     EvalVal = opt.only_init_val and opt.init_val and not opt.test_test
@@ -68,7 +71,7 @@ def train(**kwargs):
         EvalSuffix = "_test"
     logfile_name = opt.exp_desc + time.strftime("_%m_%d_%H:%M:%S") + EvalSuffix + ".log.txt"
     
-    ps = PlotSaver(logfile_name, log_to_stdout = opt.log_to_stdout)
+    ps = PlotSaver(logfile_name)
 
 
     # step1: Model
@@ -80,9 +83,7 @@ def train(**kwargs):
     
     
     model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num, model_name=opt.exp_desc)
-    # print (model)
     # pdb.set_trace()
-    global use_data_parallel
     if opt.use_gpu:
         model, use_data_parallel = multiple_gpu_process(model)
     
@@ -129,15 +130,15 @@ def train(**kwargs):
         transform = val_data_transforms,
     )
 
-    val_data_caffe = ImageFilelist(
-        flist = opt.val_data_list,
-        transform = caffe_data_transforms
-    )
+    # val_data_caffe = ImageFilelist(
+    #     flist = opt.val_data_list,
+    #     transform = caffe_data_transforms
+    # )
     
-    test_data_caffe = ImageFilelist(
-        flist = opt.test_data_list,
-        transform = caffe_data_transforms
-    )
+    # test_data_caffe = ImageFilelist(
+    #     flist = opt.test_data_list,
+    #     transform = caffe_data_transforms
+    # )
 
     if opt.make_caffe_data:
         save_caffe_data(test_data_caffe)
@@ -479,8 +480,9 @@ def train(**kwargs):
         
         previous_loss = total_loss_meter.value()[0]
     if opt.use_batch_process:
+        # pdb.set_trace()
         batch_model_id += 1
-        train(kwargs)
+        train(**kwargs)
 
 # TenCrop + Lambda
 # ValueError: Expected 4D tensor as input, got 5D tensor instead.
@@ -668,7 +670,6 @@ def test(model, dataloader, test_batch_size, mse_loss, rate_loss):
 
 def run_test():
     model = getattr(models, opt.model)(use_imp = opt.use_imp, n = opt.feat_num)
-    global use_data_parallel
     if opt.use_gpu:
         # model.cuda()  # ???? model.cuda() or model = model.cuda() all is OK
         model, use_data_parallel = multiple_gpu_process(model)

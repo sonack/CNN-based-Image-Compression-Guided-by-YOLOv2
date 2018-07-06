@@ -4,7 +4,7 @@ from torch.autograd import Variable
 class MyRound(th.autograd.Function):
     def forward(ctx, input):
         output = th.zeros_like(input)
-        output[input >= 0.5] = 1
+        output[input > 0.5] = 1 # round_cuda    top_data[i] = bottom_data[i] > 0.5 ? 1 : 0;
         return output
     
     def backward(ctx, grad_output):
