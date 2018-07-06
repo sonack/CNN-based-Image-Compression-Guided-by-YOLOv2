@@ -38,7 +38,7 @@ class DefaultConfig(object):
     only_init_val = True # not train, only eval
     init_val = True
 
-    test_test = False # 用val的方式来test_test  use run_val
+    test_test = True # 用val的方式来test_test  use run_val
      
     # exp_desc = "pretrain_wo_impmap_128"
     # yolo rate loss and weighted mse loss
@@ -86,8 +86,10 @@ class DefaultConfig(object):
     # test_data_list = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/caffe_model_cmp/ctifl.txt" # Kodak
     val_data_list = (test_data_list if test_test else os.path.join(local_ds_root,"val_subset.txt")) if not GPU_HPC else os.path.join(hpc_ds_root, "val.txt") # 利用InitVal来测试Val集和Test集
 
+    val_data_prefix = "" if test_test else ""
+    
 # training
-    batch_size = 32 # for train and val
+    batch_size = 1 # for train and val
     use_gpu = True
     num_workers = 8
     max_epoch = 200*3

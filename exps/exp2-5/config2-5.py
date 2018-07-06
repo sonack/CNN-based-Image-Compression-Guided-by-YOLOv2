@@ -15,8 +15,7 @@ import os
 
 
 
-
-
+print ('import config2-5.py!')
 class DefaultConfig(object):
 # judge environment according username
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')

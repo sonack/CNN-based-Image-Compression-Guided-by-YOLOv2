@@ -118,7 +118,7 @@ def train(**kwargs):
             transforms.CenterCrop(128)
         ]
     )
-    
+# transforms ||  data    
     train_data = ImageFilelist(
         flist = opt.train_data_list,
         transform = train_data_transforms,
@@ -126,6 +126,7 @@ def train(**kwargs):
 
     val_data = ImageFilelist(
         flist = opt.val_data_list,
+        prefix = opt.val_data_prefix,
         transform = val_data_transforms,
     )
 
