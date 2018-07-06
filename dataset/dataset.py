@@ -327,7 +327,7 @@ import os.path
 def default_loader(path):
 	return Image.open(path).convert('RGB')
 
-def default_flist_reader(flist):
+def default_flist_reader(flist, prefix):
 	"""
 	flist format: impath label\nimpath label\n ...(same to caffe's filelist)
 	"""
@@ -336,16 +336,16 @@ def default_flist_reader(flist):
 		for line in rf.readlines():
 			# impath, imlabel = line.strip().split()
 			impath = line.strip()
-			imlist.append( impath )
+			imlist.append( prefix + impath )
 					
 	return imlist
 
 class ImageFilelist(data.Dataset):
 	# def __init__(self, root, flist, transform=None, target_transform=None,    
-	def __init__(self, flist, transform=None, target_transform=None,
+	def __init__(self, flist, prefix="", transform=None, target_transform=None,
 			flist_reader=default_flist_reader, loader=default_loader):
 		# self.root   = root
-		self.imlist = flist_reader(flist)		
+		self.imlist = flist_reader(flist, prefix)		
 		self.transform = transform
 		self.target_transform = target_transform
 		self.loader = loader
