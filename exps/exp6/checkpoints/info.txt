@@ -1,1 +1,2 @@
 pretrain_wo_imp_imagenet_10k_900_07-07_15:56:36.pth是在HPC上训练得到的exp6的第900个epoch的模型
+pretrain_wo_imp_imagenet_10k_900_07-07_04:54:56.pth是在fish上训练得到的exp6的第900个epoch的模型
