@@ -15,7 +15,7 @@ import os
 
 
 
-print ('import config2-5.py!')
+print ('import config7-10.py!')
 class DefaultConfig(object):
 # judge environment according username
     GPU_HPC = (getpass.getuser() == 'zhangwenqiang')
@@ -29,8 +29,14 @@ class DefaultConfig(object):
                 'train_w_imp_gamma=0.2_r=0.43',
                 'train_w_imp_gamma=0.2_r=0.66',
                 'pretrain_wo_imp_imagenet_10k',
+                'train_w_imp_gamma=0.2_r=0.17_imagenet_10k',
+                'train_w_imp_gamma=0.2_r=0.24_imagenet_10k',
+                'train_w_imp_gamma=0.2_r=0.42_imagenet_10k',
+                'train_w_imp_gamma=0.2_r=0.64_imagenet_10k',
+
     ]
 
+# for test
     exp_resumes = [
                 "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp2-5/checkpoints/train_w_imp_gamma=0.2_r=0.12_600_07-04_02:49:54.pth",  # exp1.5  r=0.12
                 "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp1/checkpoints/pretrain_wo_imp_no_imp/06-21/pretrain_wo_imp_no_imp_600_06-21_03:30:17.pth", # exp1 no imp
@@ -38,20 +44,24 @@ class DefaultConfig(object):
                 "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp2-5/checkpoints/train_w_imp_gamma=0.2_r=0.26_600_07-05_06:55:25.pth", # exp3 r=0.26
                 "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp2-5/checkpoints/train_w_imp_gamma=0.2_r=0.43_600_07-05_14:56:06.pth", # exp4 r=0.43
                 "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp2-5/checkpoints/train_w_imp_gamma=0.2_r=0.66_600_07-05_22:26:43.pth", # exp5 r=0.66
-               # "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k/07-07/pretrain_wo_imp_imagenet_10k_900_07-07_04:54:56.pth", # exp6 on fish
-                "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k_900_07-07_15:56:36.pth", # exp6 on HPC
+                "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k/07-07/pretrain_wo_imp_imagenet_10k_900_07-07_04:54:56.pth", # exp6 on fish
+                # "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k_900_07-07_15:56:36.pth", # exp6 on HPC
     ]
+
         
 # 批处理
-    use_batch_process = False
+    use_batch_process = True
     # rate_loss_threshold
-    r_s = [0.19, 0.26, 0.43, 0.66]
+    # r_s = [0.19, 0.26, 0.43, 0.66]
+    r_s = [0.17, 0.24, 0.42, 0.64]
     # r_s = [0.26, 0.43, 0.66]
 
-    exp_ids = [2,3,4,5]
+    # exp_ids = [2,3,4,5]
+    exp_ids = [7,8,9,10]
     # exp_ids = [3,4,5]
 
-    max_epochs = [200*3] * 4
+    # max_epochs = [200*3] * 4
+    max_epochs = [300*3] * 4
     ####################
 
 
@@ -61,7 +71,7 @@ class DefaultConfig(object):
 
 # Init val for val_subset or test_subset
     init_val = True
-    only_init_val = True # not train, only eval
+    only_init_val = False # not train, only eval
     test_test = False # 用val的方式来test_test  use run_val
                       # 暂时对HPC无效， 因为HPC还没有Kodak数据集，且eval不需要用到HPC
      
@@ -84,7 +94,7 @@ class DefaultConfig(object):
 
 # model
     model = "ContentWeightedCNN"
-    use_imp = False
+    use_imp = True
     feat_num = 64  # defaut is 64
 
     # contrastive_degree = 0  # yrlv2 requires
@@ -131,13 +141,13 @@ class DefaultConfig(object):
     num_workers = 8
 
     # basic
-    batch_size = 1 # for train and val
+    batch_size = 32 # for train and val
     max_epoch = 200*3
 
     # lr
     lr = 1e-4
     lr_decay = 0.1
-    lr_anneal_epochs = 200
+    lr_anneal_epochs = 300  # exp6 said, same as config6
 
     # lr decay controlled by file created
     use_file_decay_lr = True
@@ -151,7 +161,7 @@ class DefaultConfig(object):
     weight_decay = 0
 
 # display
-    log_to_stdout = True
+    log_to_stdout = False
     print_freq = 1 # by iteration
     print_smooth = True
     plot_path = 'plot'
@@ -159,7 +169,7 @@ class DefaultConfig(object):
 
     # interval
     eval_interval = 1 # by epoch
-    save_interval = 10 # by epoch
+    save_interval = 15 # by epoch, same as config6
    
 # debug
     debug_file = "debug/info"
@@ -170,7 +180,14 @@ class DefaultConfig(object):
     # exp1
     
     # exp2
-    resume = exp_resumes[exp_id]
+    # resume = exp_resumes[exp_id]
+
+
+    # exp7-10 都采用fish上训练得到的exp6模型
+    resume = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k/07-07/pretrain_wo_imp_imagenet_10k_900_07-07_04:54:56.pth" \
+    if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k_900_07-07_04:54:56.pth"
+    
+    
     finetune = True  # continue training or finetune when given a resume file
 
 # ---------------------------------------------------------

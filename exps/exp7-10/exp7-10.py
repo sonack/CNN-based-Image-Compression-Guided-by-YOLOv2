@@ -3,7 +3,7 @@ from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
 
-exp_id = "2~5"
+exp_id = "7~10"
 
 from config import opt
 import os
