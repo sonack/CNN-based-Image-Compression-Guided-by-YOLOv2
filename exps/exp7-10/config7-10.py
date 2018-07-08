@@ -208,7 +208,13 @@ class DefaultConfig(object):
             self.resume = self.exp_resumes[self.exp_id]
             self.lr_decay_file = "signal/lr_decay_%d" % self.exp_id
             self.exp_desc = self.exp_desc_LUT[self.exp_id]
-        
+        # 如果指定了batch_id
+        if 'batch_id' in kwargs:
+            print (self.batch_id)
+            print (type(self.batch_id))
+            self.r_s = [self.r_s[self.batch_id]]
+            self.exp_ids = [self.exp_ids[self.batch_id]]
+            self.max_epochs = [self.max_epochs[self.batch_id]]
         print ('\n')
         print ('*' * 30)
         print('User Config:\n')
