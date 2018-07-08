@@ -201,11 +201,13 @@ class DefaultConfig(object):
                 print ("Warning: opt has not attribute %s" % k)
             setattr(self, k, v)
         # 如果指定了test_test
-        self.val_data_list = (self.test_data_list if self.test_test else os.path.join(self.local_ds_root,"val_subset.txt")) if not self.GPU_HPC else os.path.join(self.hpc_ds_root, "val_subset.txt") # 利用InitVal来测试Val集和Test集
+        if 'test_test' in kwargs:
+            self.val_data_list = (self.test_data_list if self.test_test else os.path.join(self.local_ds_root,"val_subset.txt")) if not self.GPU_HPC else os.path.join(self.hpc_ds_root, "val_subset.txt") # 利用InitVal来测试Val集和Test集
         # 如果指定了exp_id
-        self.resume = self.exp_resumes[self.exp_id]
-        self.lr_decay_file = "signal/lr_decay_%d" % self.exp_id
-        self.exp_desc = self.exp_desc_LUT[self.exp_id]
+        if 'exp_id' in kwargs:
+            self.resume = self.exp_resumes[self.exp_id]
+            self.lr_decay_file = "signal/lr_decay_%d" % self.exp_id
+            self.exp_desc = self.exp_desc_LUT[self.exp_id]
         
         print ('\n')
         print ('*' * 30)
