@@ -38,7 +38,7 @@ class DefaultConfig(object):
     only_init_val = True # not train, only eval
     init_val = True
 
-    test_test = True # 用val的方式来test_test  use run_val
+    test_test = False # 用val的方式来test_test  use run_val
      
     # exp_desc = "pretrain_wo_impmap_128"
     # yolo rate loss and weighted mse loss

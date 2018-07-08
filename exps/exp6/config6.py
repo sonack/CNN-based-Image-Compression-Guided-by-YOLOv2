@@ -104,9 +104,8 @@ class DefaultConfig(object):
     
 
 # datasets
-    # local and HPC dataset root
-
     use_imagenet = True
+    # local and HPC dataset root  
     local_ds_root = "/home/snk/WindowsDisk/DataSets/ImageNet/ImageNet_10K/" if use_imagenet else "/home/snk/WindowsDisk/Download/KITTI/cmpr_datasets/"
     hpc_ds_root = "/share/Dataset/ILSVRC12/ImageNet_10K/" if use_imagenet else "/share/Dataset/KITTI/cmpr_datasets/"
 
@@ -164,7 +163,8 @@ class DefaultConfig(object):
 # finetune
     # resume = "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp1/checkpoints/pretrain_wo_imp_no_imp/06-21/pretrain_wo_imp_no_imp_600_06-21_03:30:17.pth" \
     #             if not GPU_HPC else "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/checkpoints/exp1/pretrain_wo_imp_no_imp_600_06-21_03_30_17.pth"
-    resume = "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k/07-06/pretrain_wo_imp_imagenet_10k_195_07-06_20:53:45.pth"
+    resume = "/home/zhangwenqiang/jobs/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k/07-06/pretrain_wo_imp_imagenet_10k_195_07-06_20:53:45.pth" \
+                 if GPU_HPC else "/home/snk/Desktop/总结/codes/CNN-based-Image-Compression-Guided-by-YOLOv2/exps/exp6/checkpoints/pretrain_wo_imp_imagenet_10k/07-06/pretrain_wo_imp_imagenet_10k_195_07-06_20:53:45.pth"
     finetune = False  # continue training or finetune when given a resume file
 
 # ---------------------------------------------------------
